@@ -20,11 +20,16 @@
 namespace catlair;
 
 
+
 /*
-    Базовый класс хранения результата (состояния) системы
-    Имползуется как основа классов.
+    Base class for storing the system's result (state)
+    Used as the foundation for other classes.
 */
 
+
+
+/* Local libraires */
+include 'utils.php';
 
 
 class Result
@@ -33,94 +38,138 @@ class Result
     const RC_OK = 'ok';
 
 
-
     /*
-        Приватные свойства состояния
+        Private properties of the state
     */
-    private $Code        = self::RC_OK;      /* Умолчальное значение результата */
-    private $Message     = '';               /* Пустое значение сообщения */
-    private $Detaile     = [];               /* Накопительный именованный массив детализация текущего состояния в формате ключ=>значение */
-    private $InfoFlag    = false;            /* Текущая ошибка является информацонной. Содержится в объекте но при всех проверках вернет RC_OK */
+
+    /* Default result value */
+    private $Code        = self::RC_OK;
+    /*
+        Accumulating named array of details for the current state in
+        key=>value format
+    */
+    private $Details     = [];
+    /*
+        The current state is informational. It is stored in the object but
+        will always return RC_OK during all checks
+    */
+    private $OkState    = [ self::RC_OK ];
+
 
 
 
     /*
-        Создание результата из массива
+        Creates state from array
+        result:
+            code:
+            details:
     */
     static public function fromArray
     (
-        array $AArray = []
+        /* Массив источник */
+        array $aSource = []
     )
     {
         $result = new Result();
-        $key = clValueFromObject( $AArray, 'result', clValueFromObject( $AArray, 'Result' ));
+        return $result -> setResultFromArray( $aSource );
+    }
 
-        $result -> setResult
+
+    /*
+        Установка результата из массива
+        result:
+            code:
+            details:
+    */
+    public function setResultFromArray
+    (
+        array $aSource
+    )
+    {
+        $this -> setResult
         (
-            (string) clValueFromObject( $key, 'code', clValueFromObject( $key, 'Code', 'UnknownError' )),
-            (array) clValueFromObject( $key, 'detailes', clValueFromObject( $key, 'Detailes' )),
-            (string)  clValueFromObject( $key, 'message', clValueFromObject( $key, 'Message' ))
+            (string) clValueFromObject
+            (
+                $aSource,
+                [ 'result', 'code' ],
+                'unknown_error'
+            ),
+            (array) clValueFromObject
+            (
+                $aSource,
+                [ 'result', 'details' ],
+                []
+            )
         );
-        return $result;
-    }
-
-
-
-    /*
-        return true if result is Ok
-    */
-    public function isOk()
-    {
-        return $this -> Code == self::RC_OK;
-    }
-
-
-
-    /*
-        Method return true for Code = ACode
-    */
-    public function isCode
-    (
-        $ACode
-    )
-    {
-        return $this -> getCode() == $ACode;
-    }
-
-
-
-    /*
-        Устанавливает состояние результата в положение отсутсвия ошибок
-    */
-    public function setOk
-    (
-        /*
-            В случае, если текущая ошибка содержится в списке или список пуст, будет установлен результат ОК
-        */
-        array $AListCodeCheck = []
-    )
-    {
-        if( count( $AListCodeCheck ) == 0 || in_array( $this -> Code, $AListCodeCheck ))
-        {
-            $this -> InfoFlag = false;
-            $this -> Code = self::RC_OK;
-        }
         return $this;
     }
 
 
 
     /*
-        Устанавливает код ошибки
+        Установка результата из массива
     */
-    public function setCode
+    public function getResultAsArray()
+    {
+        return
+        [
+            'result' =>
+            [
+                'code'    => $this -> getCode(),
+                'details' => $this -> getDetails()
+            ]
+        ];
+    }
+
+
+
+
+    /*
+        Returns true if the result is Ok (Code is present in OkState)
+     */
+    public function isOk() : bool
+    {
+        /* Checks if the current code is present in the OkState array */
+        return in_array( $this -> Code, $this -> OkState );
+    }
+
+
+
+    /*
+        Returns true for Code == ACode
+    */
+    public function isCode
     (
-        string  $AValue,     /* Значение кода ошибки */
-        bool    $AInfoFlag = false  /* При true код ошибки будет восприниматься как OK при последующих операциях проверки */
+        /* Code for check */
+        string $aCode
+    )
+    : bool
+    {
+        return $this -> getCode() == $aCode;
+    }
+
+
+
+    /*
+        Sets the result state to "no errors"
+    */
+    public function setOk
+    (
+        /*
+            If the current error is in the provided list or the list is empty,
+            the result will be set to OK
+        */
+        array $aOkCode = []
     )
     {
-        $this -> InfoFlag   = $AInfoFlag;
-        $this -> Code       = $AValue;
+        if
+        (
+            count( $aOkCode ) == 0 ||
+            in_array( $this -> Code, $aOkCode )
+        )
+        {
+            $this -> setCode( self::RC_OK );
+        }
         return $this;
     }
 
@@ -129,42 +178,136 @@ class Result
     /*
         Устанавливается параметр детализации ошибки
     */
-    public function setDetaile
+    public function setDetail
     (
-        string $AName,  /* Имя параметра детализации состояния */
-        $AValue = null  /* Значение параметра детализации состояния */
+        /* Имя параметра детализации состояния */
+        $aKeyPath,
+        /* Значение параметра детализации состояния */
+        $aValue = null
     )
     {
-        $this -> Detaile[ $AName ] = $AValue;
+        clValueToObject( $this -> Details, $aKeyPath, $aValue );
         return $this;
     }
 
 
+
     /*
-        Возвращает значение ключа детализации
+        Returns the value of the detail key
     */
-    public function getDetaile
+    public function getDetail
     (
-        string $AName,
-        $ADefault = null
+        /* Key name as a string or path as array of string */
+        string $aKeyPath,
+        /* Default value */
+        $aDefault = null
     )
     {
-        if ( array_key_exists( $AName, $this -> Detaile ))
-        {
-            $Result = $this -> Detaile[ $AName ];
-        }
-        else
-        {
-            $Result = $ADefault;
-        }
-        return $Result;
+        return clValueFromObject( $this -> Details, $aKeyPath, $aDefault );
     }
 
 
 
-    public function getDetailes()
+
+    /*
+        Sets the result
+     */
+    public function setResult
+    (
+        /* State code */
+        string $aCode     = self::RC_OK,
+        /* Details array */
+        array $aDetails    = []
+    )
     {
-        return $Result = $this -> Detaile;
+        $this -> setCode( $aCode );
+        $this -> Details = $aDetails;
+        return $this;
+    }
+
+
+
+    /*
+        Validates the result
+    */
+    public function validate
+    (
+        /* Validation condition, if true, error will be set */
+        bool    $aNotValidate   = false,
+        /* Error code */
+        string  $aCode          = self::RC_OK,
+        /* Error details array, which will be merged with the previous one */
+        array   $aDetails       = []
+    )
+    {
+        if( $this -> isOk() && $aNotValidate )
+        {
+            $this -> setResult( $aCode, $aDetails );
+        }
+        return $this;
+    }
+
+
+
+
+    /*
+        Transfers the result from the source to the current object
+    */
+    public function resultFrom
+    (
+        /* Source object to get the result state from */
+        Result &$aSource,
+        /* Error prefix to be added during the transfer */
+        string $aPrefix = null
+    )
+    {
+        $this -> setResult
+        (
+            ( empty( $aPrefix ) ? '' : $aPrefix ) . $aSource -> Code,
+            $aSource -> Details
+        );
+        return $this;
+    }
+
+
+
+    /*
+        Transfers the result from the current object to the target object
+    */
+    public function resultTo
+    (
+        /* Target object to get the result state from */
+        Result &$aTarget,
+        /* Error prefix to be added during the transfer */
+        string $aPrefix = null
+    )
+    {
+        // Transfers the result from the current object to the target object
+        return $aTarget -> resultFrom( $this, $aPrefix );
+    }
+
+
+
+
+    /*
+        Setters and getters
+    */
+
+
+
+
+    /*
+        Устанавливает код ошибки
+    */
+    public function setCode
+    (
+        /* Значение кода ошибки */
+        string  $aValue,
+    )
+    :self
+    {
+        $this -> Code = $aValue;
+        return $this;
     }
 
 
@@ -180,222 +323,36 @@ class Result
 
 
     /*
-        Build message from replaceing parameters
+        Return details array
     */
-    public function buildMessage
-    (
-        $AReplace = [],         /* */
-        string $APrefix = '',
-        string $ASuffix = ''
-    )
+    public function getDetails()
     {
-        $this -> SetMessage( $this -> getMessage( $AReplace, $APrefix, $ASuffix ));
+        return $Result = $this -> Details;
+    }
+
+
+
+
+    /*
+        Returns the value of OkState
+     */
+    public function getOkState() : array
+    {
+        return $this -> OkState;
     }
 
 
 
     /*
-        Set result message
-    */
-    public function setMessage
+        Sets the value of OkState
+     */
+    public function setOkState
     (
-        $AValue
+        array $aOkState
     )
+    : self
     {
-        $this -> Message = $AValue;
-        return $this;
-    }
-
-
-
-    /*
-        Получение сообщения
-    */
-    public function getMessage
-    (
-        array $AReplace = [], /* Named array for replace */
-        string $APrefix = '',
-        string $ASuffix = ''
-    )
-    {
-        $Result = $this -> Message;
-        if( empty( $Result )) $Message = $this -> Code;
-
-        $Keys = [];
-        $Values = [];
-
-        /* Replace for datailes */
-        foreach( $this -> Detaile as $Key => $Value )
-        {
-            array_push( $Keys, '%' . $Key . '%' );
-//            array_push( $Values, $APrefix . ( gettype( $Value == 'string' ) ? $Value : '' ) . $ASuffix );
-        }
-
-        /* Replace for argument */
-        foreach( $AReplace as $Key => $Value )
-        {
-            array_push( $Keys, $Key );
-            array_push( $Values, $Value );
-        }
-
-        $Result = str_replace( $Keys, $Values, $Result );
-
-        return $Result;
-    }
-
-
-
-    /*
-        Установка результата
-    */
-    public function setResult
-    (
-        string $ACode      = self::RC_OK,   /* Код ошибки */
-        array $ADetaile    = [],            /* Массив детализации ошибок, который будет объединен с предыдущим */
-        string $AMessage   = null           /* Сообщение ошибки */
-    )
-    {
-        $this -> setCode( $ACode );
-        $this -> setMessage( $AMessage );
-        $this -> Detaile = $ADetaile;
-        return $this;
-    }
-
-
-
-    /*
-        Установка результата из массива
-    */
-    public function setResultFromArray
-    (
-        array $AArray = []
-    )
-    {
-        $result = clValueFromObject( $AArray, 'result', clValueFromObject( $AArray, 'Result' ));
-        $this -> setResult
-        (
-            (string) clValueFromObject( $result, 'code', clValueFromObject( $result, 'Code', 'UnknownError' )),
-            (array) clValueFromObject( $result, 'detailes', clValueFromObject( $result, 'Detailes' )),
-            (string)  clValueFromObject( $result, 'message', clValueFromObject( $result, 'Message' ))
-        );
-        return $this;
-    }
-
-
-
-    /*
-        Установка результата из массива
-    */
-    public function getResultAsArray()
-    {
-        return
-        [
-            'code'      => $this -> getCode(),
-            'detailes'  => $this -> getDetailes(),
-            'message'   => $this -> getMessage()
-        ];
-    }
-
-
-
-    /*
-        Валидация результата
-    */
-    public function ifResult
-    (
-        bool    $ANotValidate   = false,        /* Условие валидации, при истине ошибка будет установлена */
-        string  $ACode          = self::RC_OK,  /* Код ошибки */
-        array   $ADetaile       = [],           /* Массив детализации ошибок, который будет объединен с предыдущим */
-        string  $AMessage       = null          /* Сообщение ошибки */
-    )
-    {
-        return $this -> validate
-        (
-            $ANotValidate,
-            $ACode,
-            $ADetaile,
-            $AMessage
-        );
-    }
-
-
-
-    /*
-        Валидация результата
-    */
-    public function validate
-    (
-        bool    $ANotValidate   = false,        /* Условие валидации, при истине ошибка будет установлена */
-        string  $ACode          = self::RC_OK,  /* Код ошибки */
-        array   $ADetaile       = [],           /* Массив детализации ошибок, который будет объединен с предыдущим */
-        string  $AMessage       = null          /* Сообщение ошибки */
-    )
-    {
-        if( $this -> isOk() && $ANotValidate )
-        {
-            $this -> setResult( $ACode, $ADetaile, $AMessage );
-        }
-        return $this;
-    }
-
-
-
-    /*
-        Переносит результат из источника в текущий объект
-    */
-    public function resultFrom
-    (
-        Result &$ASource,       /* Объект источник для получения состояния результата */
-        string $APrefix = null  /* Префикс ошибки, который будет добавлен при переносе */
-    )
-    {
-        if ( $ASource -> InfoFlag )
-        {
-            $this -> SetOk();
-            $this -> Message    = '';
-        }
-        else
-        {
-            $this -> Code =
-            ( empty( $APrefix ) ? '' : $APrefix ) . $ASource -> Code;
-
-            $this -> Message = $ASource -> Message;
-
-            $this -> Detaile =
-            array_merge( $this -> Detaile, $ASource -> Detaile );
-        }
-        return $this;
-    }
-
-
-
-    /*
-        Переносит результат текущего объекта в объект направления
-    */
-    public function resultTo
-    (
-        Result &$ATarget,       /* Объект направления для переноса результата из текущего объекта */
-        string $APrefix = null  /* Префикс ошибки, который будет добавлен при переносе */
-    )
-    {
-        if( $this -> InfoFlag )
-        {
-            $ATarget -> SetOk();
-            $ATarget -> Message = '';
-        }
-        else
-        {
-            $ATarget -> Code =
-            ( empty( $APrefix ) ? '' : $APrefix ) . $this -> Code;
-
-            $ATarget -> Message =
-            $this -> Message;
-
-            $ATarget -> Detaile =
-            array_merge( $ATarget -> Detaile, $this -> Detaile );
-        }
+        $this -> OkState = $aOkState;
         return $this;
     }
 }
-
-
