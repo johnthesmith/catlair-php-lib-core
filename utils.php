@@ -694,9 +694,12 @@ function clValueToObject
 */
 function clValueFromObject
 (
-    $AObject,           /* Array or object */
-    $AKey,              /* Key as string or as array of sting */
-    $ADefault = null    /* Default value */
+    /* Array or object */
+    $AObject,
+    /* Key as string or as array of sting */
+    $AKey,
+    /* Default value */
+    $ADefault = null
 )
 {
     $Result = $ADefault;
