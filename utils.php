@@ -981,11 +981,24 @@ function clConvert
 
 
 
+/*
+    kebab-case to UpperCamelCase
+        kebab-case -> KebabCase
+*/
+function clKebabToUpperCamel
+(
+    string $input
+)
+: string
+{
+    return str_replace( ' ', '', ucwords( str_replace( '-', ' ', $input )));
+}
+
+
 
 /*
     Конвертакция стиля UpperCamelCase в SnakeCase
     - UpperCamelCase -> upper_camel_case
-    - HELLP_WORLD
 */
 function clUpperCamelToSnake( $AValue )
 {
@@ -1178,3 +1191,51 @@ function clArrayMerge
 
     return $Result;
 }
+
+
+
+
+/*
+    Converts a given path to a canonical form and ensures it is within the
+    allowed root directory. Returns the canonical path or false if invalid or
+    outside the root directory.
+*/
+function clCanonicalPath
+(
+    string $userPath,
+    string $rootPath
+)
+{
+    $normalize = function($path)
+    {
+        $parts = [];
+        foreach( explode('/', str_replace('\\', '/', $path )) as $part) {
+            if( $part === '' || $part === '.' ) continue;
+            if( $part === '..' ) array_pop( $parts );
+            else $parts[] = $part;
+        }
+        return '/' . implode( '/', $parts );
+    };
+
+    /* Убедимся, что rootPath абсолютный */
+    $root = rtrim( $normalize(realpath($rootPath)), '/' );
+
+    /* Если пользовательский путь пустой, вернем false */
+    if (empty($userPath))
+    {
+        return false;
+    }
+
+    /* Строим полный путь */
+    $full
+    = (isset($userPath[0]) && $userPath[0] === '/')
+    ? $normalize($userPath)
+    : $normalize($root . '/' . $userPath);
+
+    /* Проверяем, что путь находится внутри корня */
+    return ( strpos( $full, $root ) === 0) ? $full : false;
+}
+
+
+
+

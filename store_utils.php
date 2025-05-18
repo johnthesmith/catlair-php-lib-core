@@ -35,12 +35,18 @@ require_once 'utils.php';
 */
 function clWriteStore
 (
-    $AFile,                                 /* Путь файла хранилиза */
-    $AValue,                                /* Устанавливаемое значение */
-    $ASSLKey            = null,             /* Ключ шифрования */
-    $ASSLMethod         = 'aes-256-cbc',    /* Метод шифрования openssl_get_cipher_methods() */
-    $ASSLVectorLength   = 16                /* Длина Cтартового вектора */
+    /* Путь файла хранилиза */
+    $AFile,
+    /* Устанавливаемое значение */
+    $AValue,
+    /* Ключ шифрования */
+    $ASSLKey            = null,
+    /* Метод шифрования openssl_get_cipher_methods() */
+    $ASSLMethod         = 'aes-256-cbc',
+    /* Длина Cтартового вектора */
+    $ASSLVectorLength   = 16
 )
+:Result
 {
     /* Result */
     $result = new Result();
@@ -129,6 +135,7 @@ function clReadStore
     $ADefault   = null, /* Умолчальное значнеи при отсутсвии */
     $ASSLKey    = null  /* Ключ шифрования SSL */
 )
+:Result
 {
     $result = new Result();
     $AValue = null;

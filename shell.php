@@ -83,11 +83,20 @@ class Shell extends Result
     /*
         Add command to buffer
     */
-    public function cmdAdd( $ACommand, $AQuote = '', $ATerminator = '' )
+    public function cmdAdd
+    (
+        $ACommand,
+        $AQuote = '',
+        $ATerminator = ''
+    )
     {
         if ( !empty( $ACommand ))
         {
-            array_push( $this -> CommandBuffer, $AQuote . $ACommand . $AQuote . $ATerminator );
+            $this -> CommandBuffer[] =
+            $AQuote .
+            $ACommand .
+            $AQuote .
+            $ATerminator;
         }
         return $this;
     }
@@ -109,11 +118,22 @@ class Shell extends Result
 
 
     /*
-        Add command to buffer
+        Add command argument in to buffer
     */
-    public function longAdd( $AKey, $AValue = null )
+    public function longAdd
+    (
+        $aKey,
+        $aValue = null
+    )
     {
-        array_push( $this -> CommandBuffer, ' --' . $AKey . ( empty( $AValue ) ? '' : ( '=' . '"' . $AValue. '"' ) ));
+        $this -> CommandBuffer[] =
+        '--' .
+        $aKey .
+        (
+            $aValue === null
+            ? ''
+            : ( '=' . escapeshellarg( $aValue ))
+        );
         return $this;
     }
 

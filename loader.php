@@ -41,7 +41,7 @@ class Loader extends Result
 
 
 
-    public function load(  $ALibrary )
+    public function load(  $aLibrary )
     {
         if( $this -> isOk() )
         {
