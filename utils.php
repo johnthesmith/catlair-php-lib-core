@@ -420,6 +420,8 @@ function clReplace
     /* Move Source to Result */
     $Result = $ASource;
 
+    $count = 0;
+
     do
     {
         /* Split the source to lexemes */
@@ -488,6 +490,11 @@ function clReplace
                     $Continue = $Continue || $ResultBefore != $Result;
                 }
             }
+        }
+        $count ++;
+        if( $count > 100 )
+        {
+            $Continue = false;
         }
     }
     while( $Continue );
