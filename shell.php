@@ -106,11 +106,11 @@ class Shell extends Result
     /*
         Add file
     */
-    public function fileAdd( $AFile )
+    public function fileAdd( $aFile )
     {
-        if ( !empty( $AFile ))
+        if ( !empty( $aFile ))
         {
-            array_push( $this -> CommandBuffer, ' "' . $AFile . '"' );
+            $this -> CommandBuffer[] = escapeshellarg( $aFile );
         }
         return $this;
     }
