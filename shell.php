@@ -17,7 +17,7 @@
 
 
 namespace catlair;
-/*LICENCE_HEADER*/
+
 
 
 include_once 'log.php';

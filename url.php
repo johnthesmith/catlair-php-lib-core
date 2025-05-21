@@ -96,7 +96,14 @@ class URL
         if( !empty( $this -> Path ) ) $Result .= '/' . implode( '/', $this -> Path );
 
         /* Params */
-        if( !empty( $this -> Params -> GetParams() )) $Result .= '?' . $this -> Params -> GetParamsAsURL();
+        if
+        (
+            !empty( $this -> Params ) &&
+            !empty( $this -> Params -> getParams())
+        )
+        {
+            $Result .= '?' . $this -> Params -> GetParamsAsURL();
+        }
 
         /* Hash */
         if( !empty( $this -> Hash )) $Result .= '#' . $this -> Hash;
@@ -280,6 +287,27 @@ class URL
         $this -> Hash = $AValue;
         $this -> Changed = true;
         return $this;
+    }
+
+
+
+    /*
+        Load url from current resuest
+    */
+    function fromRequest()
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $port   = $_SERVER['SERVER_PORT'] ?? (($scheme === 'https') ? 443 : 80);
+        $uri    = $_SERVER['REQUEST_URI'] ?? '/';
+
+        // Учитываем порт, если он нестандартный
+        $defaultPort = ($scheme === 'https') ? 443 : 80;
+        $hostWithPort = ($port != $defaultPort) ? "$host:$port" : $host;
+
+        $url = "$scheme://$hostWithPort$uri";
+
+        return $this->parse($url);
     }
 }
 

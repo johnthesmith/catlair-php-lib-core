@@ -1245,4 +1245,15 @@ function clCanonicalPath
 
 
 
-
+/*
+    Returns the local path if available, or an empty value otherwise.
+*/
+function clLocalPath
+(
+    /* Local path */
+    string $a = null
+)
+:string
+{
+    return  empty( $a ) ? '' : ( '/' . $a );
+}
