@@ -106,5 +106,5 @@ function clParse
         break;
     }
 
-    return $result;
+    return $result ?? [];
 }
