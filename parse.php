@@ -67,7 +67,7 @@ function clParse
             {
                 set_error_handler
                 (
-                    function( $code, $message ) use ( &$aResult )
+                    function( $code, $message ) use ( &$aResult, &$result )
                     {
                         $aResult -> setResult
                         (
@@ -105,6 +105,8 @@ function clParse
         }
         break;
     }
+
+    if( !is_array( $result )) $result = [];
 
     return $result ?? [];
 }
