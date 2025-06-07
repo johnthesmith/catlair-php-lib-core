@@ -1255,5 +1255,5 @@ function clLocalPath
 )
 :string
 {
-    return  empty( $a ) ? '' : ( '/' . $a );
+    return  empty( $a ) ? '' : ( DIRECTORY_SEPARATOR . trim($a, "/\\") );
 }
