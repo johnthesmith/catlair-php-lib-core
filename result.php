@@ -29,7 +29,8 @@ namespace catlair;
 
 
 /* Local libraires */
-include 'utils.php';
+require_once 'utils.php';
+
 
 
 class Result

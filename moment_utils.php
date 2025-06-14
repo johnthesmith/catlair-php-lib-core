@@ -27,7 +27,7 @@ namespace catlair;
 
 
 
-include_once 'moment.php';
+require_once 'moment.php';
 
 
 define( 'DELTA_DECIMAL', 'DELTA_DECIMAL' );     /* 1.5 Min */

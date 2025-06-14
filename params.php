@@ -21,17 +21,16 @@ namespace catlair;
 
 
 /*
-    Класс типизированного параметров.
+    Class for typed parameters.
 
-    Параметры хранятся в именованном списке в формате ключ=>значение
-    Параметры имеют механизм типизированного возврата значений, копирование, проверки.
+    Parameters are stored as key => value.
+    Supports typed value retrieval, copying, and validation.
 
-    Параметр наследуются от Result и имеют состояние.
+    Parameters inherit from Result and maintain state.
 */
 
-
 /*
-    Загрузка внутренних библиотек
+    Load core libraties
 */
 require_once 'result.php';
 require_once 'utils.php';
@@ -43,8 +42,10 @@ class Params extends Result
     /*
         Приватные свойства
     */
-    private $Params         = [];   /* Массив именованных параметров */
-    private $CurrentPath    = [];   /* Мавссив умолчальног пути параметров */
+    /* Массив именованных параметров */
+    private $Params         = [];
+    /* Мавссив умолчальног пути параметров */
+    private $CurrentPath    = [];
 
 
     /*
@@ -143,27 +144,36 @@ class Params extends Result
 
 
 
+
     /*
-        Возвращает значение параметров по дереву или имени
-        Последующие ключи не проверяются если значение получено из предыдущего
+        Returns the parameter value by tree or name.
+        Subsequent keys are not checked if a value was already found.
     */
     public function getParamMul
     (
-        array $APathes,     /* Массив путей или имен ключей до параметра либо имя параметра на нулевом уровне */
-        $ADefault = null    /* Умолчальное значение при отсутсвии параметра. Типизация производится по умолчальному значению */
+        /*
+            Array of paths or parameter names to search,
+            or a top-level parameter name
+        */
+        array $aPathes,
+        /*
+            Default value if parameter is not found.
+            Return type is inferred from the default value
+        */
+        $aDefault = null
     )
     {
-        $Result = null;
-        $c = count( $APathes );
-        for( $i = 0; $i < $c && $Result === null ; $i ++ )
+        $result = null;
+        $c = count( $aPathes );
+        for( $i = 0; $i < $c && $result === null ; $i ++ )
         {
-            $Val = $this -> getParam( $APathes[ $i ]);
-            if( $Val !== null )
+            $val = $this -> getParam( $aPathes[ $i ]);
+            if( $val !== null )
             {
-                $Result = $Val;
+                $result = $val;
             }
         }
-        return $Result === null ? $ADefault : $Result;
+        return $result === null ? $aDefault : $result;
     }
 
 
@@ -192,22 +202,25 @@ class Params extends Result
 
 
 
-    public function AddParamsFromFile
+    /*
+        Appends parameters from an array or object
+        without overwriting existing scalar values.
+    */
+    public function appendParams
     (
-        string $AFileName,
-        bool $ANotExists = false
+        $AParams
     )
     {
-        $json = json_decode( file_get_contents( $AFileName ));
+        $AParams = (array) $AParams;
 
-        return $this
-        -> addParams
+        $this -> Params = clArrayAppend
         (
-            empty( $json ) ? [] : $json,
-            $ANotExists
+            $this -> Params,
+            $AParams
         );
-    }
 
+        return $this;
+    }
 
 
 

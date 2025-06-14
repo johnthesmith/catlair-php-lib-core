@@ -74,37 +74,35 @@ function encodeURIComponent
 
 
 /*
-    Return GUID string
-*/
-function clGUID()
-:string
-{
-    /* TODO !!! Надо будет переписать на нормальный алгоритм. */
-    $A=str_pad(dechex(rand(0,hexdec('EFFFFFFF'))),8,'0');
-    $B=str_pad(dechex(rand(0,hexdec('FFFF'))),4,'0');
-    $C=str_pad(dechex(rand(0,hexdec('FFFF'))),4,'0');
-    $D=str_pad(dechex(rand(0,hexdec('FFFF'))),4,'0');
-    $E=str_pad(dechex(rand(0,hexdec('FFFF'))),4,'0');
-    $F=str_pad(dechex(rand(0,hexdec('EFFFFFFF'))),8,'0');
-    return $A . '-' . $B . '-' . $C . '-' . $D . '-' . $E . $F;
-}
-
-
-
-/*
     Return UUID string
 */
 function clUUID()
 :string
 {
-    /* TODO !!! Надо будет переписать на нормальный алгоритм. */
-    $A = str_pad( dechex( rand( 0, hexdec( 'EFFFFFFF' ))), 8, '0' );
-    $B = str_pad( dechex( rand( 0, hexdec( 'FFFF' ))), 4, '0' );
-    $C = str_pad( dechex( rand( 0, hexdec( 'FFFF' ))), 4, '0' );
-    $D = str_pad( dechex( rand( 0, hexdec( 'FFFF' ))), 4, '0' );
-    $E = str_pad( dechex( rand( 0, hexdec( 'FFFF' ))), 4, '0' );
-    $F = str_pad( dechex( rand( 0, hexdec( 'EFFFFFFF' ))), 8, '0' );
-    return $A . $B . $C . $D . $E . $F;
+    $data = random_bytes(16);
+
+    /* версия 4 */
+    $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+
+    /* вариант RFC 4122 */
+    $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+
+    return vsprintf
+    (
+        '%s%s-%s-%s-%s-%s%s%s',
+        str_split( bin2hex( $data ), 4 )
+    );
+}
+
+
+
+/*
+    Return base64-encoded 128-bit ID
+*/
+function clBase64ID()
+:string
+{
+    return rtrim( base64_encode( random_bytes(16) ), '=' );
 }
 
 
@@ -1173,7 +1171,7 @@ function clArrayMerge
     &$A2
 )
 {
-  $Result = $A1;
+    $Result = $A1;
 
     foreach( $A2 as $key => &$value )
     {
@@ -1199,6 +1197,61 @@ function clArrayMerge
     return $Result;
 }
 
+
+
+/*
+
+    Дополняет элементами второго массива первый с глубоким объединением
+    массивов, без замены скалярных значений.
+
+    Пример:
+    $A1 = ['key1' => 'val1', 'key2' => ['sub1' => 1]];
+    $A2 = ['key1' => 'new_val', 'key2' => ['sub2' => 2], 'key3' => 'val3'];
+    Результат:
+    [
+        'key1' => 'val1',          // не перезаписано
+        'key2' => ['sub1'=>1, 'sub2'=>2],  // массивы объединены
+        'key3' => 'val3'           // добавлен новый ключ
+    ];
+*/
+function clArrayAppend
+(
+    &$A1,
+    &$A2
+)
+{
+    $result = $A1;
+
+    foreach( $A2 as $key => &$value )
+    {
+        if
+        (
+            !isset( $result[ $key ]) ||
+            !is_scalar( $result[ $key ])
+        )
+        {
+            if
+            (
+                is_array( $value ) &&
+                isset( $result[ $key ]) &&
+                is_array( $result[ $key ])
+            )
+            {
+                $result[ $key ] = clArrayAppend
+                (
+                    $result[ $key ],
+                    $value
+                );
+            }
+            else
+            {
+                $result[ $key ] = $value;
+            }
+        }
+    }
+
+    return $result;
+}
 
 
 

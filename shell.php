@@ -20,9 +20,9 @@ namespace catlair;
 
 
 
-include_once 'log.php';
-include_once 'result.php';
-include_once 'console.php';
+require_once 'log.php';
+require_once 'result.php';
+require_once 'console.php';
 
 /*
     Shell module for work with stdin stdout.
