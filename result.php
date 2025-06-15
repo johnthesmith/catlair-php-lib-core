@@ -229,6 +229,18 @@ class Result
 
 
     /*
+        Add backtrace in to details
+    */
+    public function backtrace()
+    {
+        $this -> Details[ 'backtrace' ] =
+        debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+        return $this;
+    }
+
+
+
+    /*
         Validates the result
     */
     public function validate
@@ -284,7 +296,8 @@ class Result
     )
     {
         // Transfers the result from the current object to the target object
-        return $aTarget -> resultFrom( $this, $aPrefix );
+        $aTarget -> resultFrom( $this, $aPrefix );
+        return $this;
     }
 
 
