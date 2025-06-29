@@ -1209,44 +1209,31 @@ function clArrayMerge
     $A2 = ['key1' => 'new_val', 'key2' => ['sub2' => 2], 'key3' => 'val3'];
     Результат:
     [
-        'key1' => 'val1',          // не перезаписано
-        'key2' => ['sub1'=>1, 'sub2'=>2],  // массивы объединены
-        'key3' => 'val3'           // добавлен новый ключ
+        'key1' => 'val1',                   // не перезаписано
+        'key2' => ['sub1'=>1, 'sub2'=>2],   // массивы объединены
+        'key3' => 'val3'                    // добавлен новый ключ
     ];
 */
 function clArrayAppend
 (
-    &$A1,
-    &$A2
+    $A1,
+    $A2
 )
 {
     $result = $A1;
-
-    foreach( $A2 as $key => &$value )
+    foreach( $A2 as $key => $value )
     {
-        if
+        if( !isset( $result[ $key ]))
+        {
+            $result[ $key ] = $value;
+        }
+        else if
         (
-            !isset( $result[ $key ]) ||
-            !is_scalar( $result[ $key ])
+            is_array( $result[ $key ]) &&
+            is_array( $value )
         )
         {
-            if
-            (
-                is_array( $value ) &&
-                isset( $result[ $key ]) &&
-                is_array( $result[ $key ])
-            )
-            {
-                $result[ $key ] = clArrayAppend
-                (
-                    $result[ $key ],
-                    $value
-                );
-            }
-            else
-            {
-                $result[ $key ] = $value;
-            }
+            $result[ $key ] = clArrayAppend( $result[ $key ], $value );
         }
     }
 

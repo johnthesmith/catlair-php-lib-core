@@ -38,24 +38,26 @@ class Result
     /* Default result code */
     const RC_OK = 'ok';
 
-
     /*
         Private properties of the state
     */
 
-    /* Default result value */
-    private $Code        = self::RC_OK;
-    /*
-        Accumulating named array of details for the current state in
-        key=>value format
-    */
-    private $Details     = [];
-    /*
-        The current state is informational. It is stored in the object but
-        will always return RC_OK during all checks
-    */
     private $OkState    = [ self::RC_OK ];
 
+    /* History index */
+    private int $historyIndex = -1;
+
+    /*
+        Array of history results
+        subelements:
+            code - Default result value
+            Accumulating named array of details for the current state in
+            key=>value format
+            details
+            The current state is informational. It is stored in the object but
+            will always return RC_OK during all checks
+    */
+    private array $history = [];
 
 
 
@@ -74,6 +76,7 @@ class Result
         $result = new Result();
         return $result -> setResultFromArray( $aSource );
     }
+
 
 
     /*
@@ -131,7 +134,8 @@ class Result
     public function isOk() : bool
     {
         /* Checks if the current code is present in the OkState array */
-        return in_array( $this -> Code, $this -> OkState );
+        return  $this -> historyIndex === -1
+        || in_array( $this -> getCode(), $this -> OkState );
     }
 
 
@@ -154,23 +158,11 @@ class Result
     /*
         Sets the result state to "no errors"
     */
-    public function setOk
-    (
-        /*
-            If the current error is in the provided list or the list is empty,
-            the result will be set to OK
-        */
-        array $aOkCode = []
-    )
+    public function setOk()
     {
-        if
-        (
-            count( $aOkCode ) == 0 ||
-            in_array( $this -> Code, $aOkCode )
-        )
-        {
-            $this -> setCode( self::RC_OK );
-        }
+        /* Drop state */
+        $this -> history = [];
+        $this -> historyIndex = -1;
         return $this;
     }
 
@@ -187,7 +179,12 @@ class Result
         $aValue = null
     )
     {
-        clValueToObject( $this -> Details, $aKeyPath, $aValue );
+        clValueToObject
+        (
+            $this -> history[ $this -> historyIndex ][ 'details' ],
+            $aKeyPath,
+            $aValue
+        );
         return $this;
     }
 
@@ -204,9 +201,13 @@ class Result
         $aDefault = null
     )
     {
-        return clValueFromObject( $this -> Details, $aKeyPath, $aDefault );
+        return clValueFromObject
+        (
+            $this -> history[ $this -> historyIndex ][ 'details' ],
+            $aKeyPath,
+            $aDefault
+        );
     }
-
 
 
 
@@ -221,8 +222,12 @@ class Result
         array $aDetails    = []
     )
     {
-        $this -> setCode( $aCode );
-        $this -> Details = $aDetails;
+        $this -> history[] =
+        [
+            'code' => $aCode,
+            'details' => $aDetails
+        ];
+        $this -> historyIndex++;
         return $this;
     }
 
@@ -233,8 +238,11 @@ class Result
     */
     public function backtrace()
     {
-        $this -> Details[ 'backtrace' ] =
-        debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+        if ($this->historyIndex >= 0)
+        {
+            $this -> history[ $this -> historyIndex ][ 'details' ][ 'backtrace' ] =
+            debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+        }
         return $this;
     }
 
@@ -269,16 +277,11 @@ class Result
     public function resultFrom
     (
         /* Source object to get the result state from */
-        Result &$aSource,
-        /* Error prefix to be added during the transfer */
-        string $aPrefix = null
+        Result $aSource
     )
     {
-        $this -> setResult
-        (
-            ( empty( $aPrefix ) ? '' : $aPrefix ) . $aSource -> Code,
-            $aSource -> Details
-        );
+        $this -> history = $aSource -> history;
+        $this -> historyIndex = $aSource -> historyIndex;
         return $this;
     }
 
@@ -290,39 +293,34 @@ class Result
     public function resultTo
     (
         /* Target object to get the result state from */
-        Result &$aTarget,
-        /* Error prefix to be added during the transfer */
-        string $aPrefix = null
+        Result &$aTarget
     )
     {
-        // Transfers the result from the current object to the target object
-        $aTarget -> resultFrom( $this, $aPrefix );
+        $aTarget -> history = $this -> history;
+        $aTarget -> historyIndex = $this -> historyIndex;
+        return $this;
+    }
+
+
+    /*
+        Merges the result from the source into the current object without loop
+    */
+    public function mergeResultFrom
+    (
+        /* Source object to merge result state from */
+        Result $aSource
+    )
+    {
+        $this -> history = array_merge( $this -> history, $aSource -> history );
+        $this -> historyIndex = count( $this -> history ) - 1;
         return $this;
     }
 
 
 
-
-    /*
+    /**************************************************************************
         Setters and getters
     */
-
-
-
-
-    /*
-        Устанавливает код ошибки
-    */
-    public function setCode
-    (
-        /* Значение кода ошибки */
-        string  $aValue,
-    )
-    :self
-    {
-        $this -> Code = $aValue;
-        return $this;
-    }
 
 
 
@@ -331,19 +329,22 @@ class Result
     */
     public function getCode()
     {
-        return $this -> Code;
+        return
+        $this -> historyIndex < 0
+        ? self::RC_OK
+        : $this -> history[ $this -> historyIndex ][ 'code' ];
     }
-
-
 
     /*
         Return details array
     */
     public function getDetails()
     {
-        return $Result = $this -> Details;
+        return
+        $this -> historyIndex < 0
+        ? []
+        : $this -> history[ $this -> historyIndex ][ 'details' ];
     }
-
 
 
 
@@ -369,4 +370,15 @@ class Result
         $this -> OkState = $aOkState;
         return $this;
     }
+
+
+
+    /*
+        Return all result history
+    */
+    public function getResultHistory()
+    {
+        return $this -> history;
+    }
 }
+
