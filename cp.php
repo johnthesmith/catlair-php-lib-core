@@ -370,17 +370,105 @@ class Cp
                 return true;
         return false;
     }
+
+
+
+    /*
+        Проверка OR_OR_CONTAINS для ключа и замка
+        Хотя бы один кортеж ключа содержится хотя бы в одном кортеже замка
+
+        Истина:
+        $key  = [ ['a','c'], ['x'] ];
+        $lock = [ ['a','c'], ['a','c','x'], ['a','b','c','y'] ];
+
+        Ложь:
+        $key  = [ ['z'] ];
+        $lock = [ ['a','b'], ['b','x'] ];
+
+    */
+    private static function checkOrOrContains
+    (
+        array $key,
+        array $lock
+    ): bool
+    {
+        foreach( $key as $k )
+        {
+            foreach( $lock as $l )
+            {
+                if ( !array_diff( $k, $l ) )
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+    /*
+        Проверка AND_AND_INTERSECTS для ключа и замка
+        Каждый кортеж ключа пересекается с каждым кортежем замка
+
+        Истина:
+        $key  = [ ['a'], ['c'] ];
+        $lock = [ ['a','c'], ['a','c','x'] ];
+
+        Ложь:
+        $key  = [ ['c'], ['y'] ];
+        $lock = [ ['a','b'], ['b','x'] ];
+    */
+    private static function checkAndAndIntersects
+    (
+        array $key,
+        array $lock
+    ): bool
+    {
+        foreach( $key as $k )
+            foreach( $lock as $l )
+                if( !array_intersect( $k, $l ) )
+                    return false;
+        return true;
+    }
+
+
+
+    /*
+        Проверка AND_OR_INTERSECTS для ключа и замка
+        Каждый кортеж ключа пересекается хотя бы с одним кортежем замка
+
+        Истина:
+        $key  = [ ['a','x'], ['d','y'] ];
+        $lock = [ ['a','b'], ['c','d'] ];
+
+        Ложь:
+        $key  = [ ['x','y'], ['z'] ];
+        $lock = [ ['a','b'], ['c','d'] ];
+    */
+    private static bool checkAndOrIntersects
+    (
+        array $key,
+        array $lock
+    ): bool
+    {
+        foreach( $key as $k )
+            if( !array_filter( $lock, fn( $l ) => count(array_intersect( $k, $l ))))
+                return false;
+        return true;
+    }
+
+
+
+
 }
 
 
+$key  = [ ['c'], ['y'] ];
+$lock = [ ['a','b'], ['b','x'] ];
 
-
-
-
-$lock = [ ['a','c'], ['a','c','x'], ['a','b','c','y'] ];
-$key  = [ ['a','c'], ['x'] ];
 
 print_r
 (
-    Cp::check( $key, $lock, Cp::AND_OR_CONTAINS ) ? "t" : "f"
+    Cp::check( $key, $lock, Cp::OR_OR_CONTAINS ) ? "t" : "f"
 );
