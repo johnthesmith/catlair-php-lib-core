@@ -446,7 +446,7 @@ class Cp
         $key  = [ ['x','y'], ['z'] ];
         $lock = [ ['a','b'], ['c','d'] ];
     */
-    private static bool checkAndOrIntersects
+    private static function checkAndOrIntersects
     (
         array $key,
         array $lock
@@ -459,6 +459,58 @@ class Cp
     }
 
 
+
+    /*
+        Проверка OR_AND_INTERSECTS для ключа и замка
+        Есть кортеж замка, пересекающийся со всеми кортежами ключа
+
+        Истина:
+        $key  = [ ['a'], ['c'] ];
+        $lock = [ ['a','c'], ['x','y'] ];
+
+        Ложь:
+        $key  = [ ['a'], ['c'] ];
+        $lock = [ ['a','b'], ['x','y'] ];
+    */
+    private static function checkOrAndIntersects
+    (
+        array $key,
+        array $lock
+    ): bool
+    {
+        foreach( $lock as $l )
+            if ( !array_filter( $key, fn( $k ) => count(array_intersect( $k, $l ))))
+                return false;
+        return true;
+    }
+
+
+
+
+    /*
+        Проверка OR_OR_INTERSECTS для ключа и замка
+        Есть кортеж ключа, пересекающийся хотя бы с одним кортежем замка
+
+        Истина:
+        $key  = [ ['x','a'], ['z'] ];
+        $lock = [ ['a','b'], ['c','d'] ];
+
+        Ложь:
+        $key  = [ ['x'], ['z'] ];
+        $lock = [ ['a','b'], ['c','d'] ];
+    */
+    private static function checkOrOrIntersects
+    (
+        array $key,
+        array $lock
+    ): bool
+    {
+        foreach( $key as $k )
+            foreach( $lock as $l )
+                if( count( array_intersect( $k, $l )) > 0)
+                    return true;
+        return false;
+    }
 
 
 }
