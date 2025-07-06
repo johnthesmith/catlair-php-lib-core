@@ -514,13 +514,3 @@ class Cp
 
 
 }
-
-
-$key  = [ ['c'], ['y'] ];
-$lock = [ ['a','b'], ['b','x'] ];
-
-
-print_r
-(
-    Cp::check( $key, $lock, Cp::OR_OR_CONTAINS ) ? "t" : "f"
-);
