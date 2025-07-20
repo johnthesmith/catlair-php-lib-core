@@ -14,10 +14,9 @@
     the GNU Aferror General Public License along with this program. If not, see
     <https://www.gnu.org/licenses/>.
 
-    Модуль CP-12 работы с композитными предикатами
+    CP-12 module for working with composite predicates
     https://github.com/johnthesmith/scraps/blob/main/ru/cp12.md
 */
-
 
 
 
@@ -707,7 +706,6 @@ class Cp
                 return false;
         return true;
     }
-
 
 
 
