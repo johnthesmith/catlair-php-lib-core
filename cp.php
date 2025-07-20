@@ -23,70 +23,62 @@
 
 class Cp
 {
-/* Все кортежи ключа равны всем кортежам замка */
-    const AND_AND_EQUALS         = 1;
-    /* SQL-алиас: FULL OUTER JOIN (равенство) */
-    const FULL_OUTER_JOIN_EQUALS = self::AND_AND_EQUALS;
+    /* Все кортежи ключа равны всем кортежам замка */
+    const UNKNOWN                   = 0;
+
+    /* Все кортежи ключа равны всем кортежам замка */
+    const AND_AND_EQUALS            = 1;
+    const FULL_OUTER_JOIN_EQUALS    = 1;
 
     /* Все кортежи ключа равны хотя бы одному кортежу замка */
-    const AND_OR_EQUALS          = 2;
-    /* SQL-алиас: LEFT JOIN (равенство) */
-    const LEFT_JOIN_EQUALS       = self::AND_OR_EQUALS;
+    const AND_OR_EQUALS             = 2;
+    const LEFT_JOIN_EQUALS          = 2;
 
     /* Хотя бы один кортеж ключа равен всем кортежам замка */
-    const OR_AND_EQUALS          = 3;
-    /* SQL-алиас: RIGHT JOIN (равенство) */
-    const RIGHT_JOIN_EQUALS      = self::OR_AND_EQUALS;
+    const OR_AND_EQUALS             = 3;
+    const RIGHT_JOIN_EQUALS         = 3;
 
     /* Хотя бы один кортеж ключа равен хотя бы одному кортежу замка */
-    const OR_OR_EQUALS           = 4;
-    /* SQL-алиас: SEMI JOIN (равенство) */
-    const SEMI_JOIN_EQUALS       = self::OR_OR_EQUALS;
+    const OR_OR_EQUALS              = 4;
+    const SEMI_JOIN_EQUALS          = 4;
 
     /* Все кортежи ключа содержатся во всех кортежах замка */
-    const AND_AND_CONTAINS       = 5;
-    /* SQL-алиас: FULL OUTER JOIN (включение) */
-    const FULL_OUTER_JOIN_CONTAINS = self::AND_AND_CONTAINS;
+    const AND_AND_CONTAINS          = 5;
+    const FULL_OUTER_JOIN_CONTAINS  = 5;
 
     /* Все кортежи ключа содержатся хотя бы в одном кортеже замка */
-    const AND_OR_CONTAINS        = 6;
-    /* SQL-алиас: LEFT JOIN (включение) */
-    const LEFT_JOIN_CONTAINS     = self::AND_OR_CONTAINS;
+    const AND_OR_CONTAINS           = 6;
+    const LEFT_JOIN_CONTAINS        = 6;
 
     /* Хотя бы один кортеж ключа содержится во всех кортежах замка */
-    const OR_AND_CONTAINS        = 7;
-    /* SQL-алиас: RIGHT JOIN (включение) */
-    const RIGHT_JOIN_CONTAINS    = self::OR_AND_CONTAINS;
+    const OR_AND_CONTAINS           = 7;
+    const RIGHT_JOIN_CONTAINS       = 7;
 
     /* Хотя бы один кортеж ключа содержится хотя бы в одном кортеже замка */
-    const OR_OR_CONTAINS         = 8;
-    /* SQL-алиас: SEMI JOIN (включение) */
-    const SEMI_JOIN_CONTAINS     = self::OR_OR_CONTAINS;
+    const OR_OR_CONTAINS            = 8;
+    const SEMI_JOIN_CONTAINS        = 8;
 
     /* Все кортежи ключа пересекаются со всеми кортежами замка */
-    const AND_AND_INTERSECTS     = 9;
-    /* SQL-алиас: CROSS JOIN (пересечение) */
-    const CROSS_JOIN_INTERSECTS  = self::AND_AND_INTERSECTS;
+    const AND_AND_INTERSECTS        = 9;
+    const CROSS_JOIN_INTERSECTS     = 9;
 
     /* Все кортежи ключа пересекаются хотя бы с одним кортежем замка */
-    const AND_OR_INTERSECTS      = 10;
-    /* SQL-алиас: LEFT JOIN (пересечение) */
-    const LEFT_JOIN_INTERSECTS   = self::AND_OR_INTERSECTS;
+    const AND_OR_INTERSECTS         = 10;
+    const LEFT_JOIN_INTERSECTS      = 10;
 
     /* Хотя бы один кортеж ключа пересекается со всеми кортежами замка */
-    const OR_AND_INTERSECTS      = 11;
-    /* SQL-алиас: RIGHT JOIN (пересечение) */
-    const RIGHT_JOIN_INTERSECTS  = self::OR_AND_INTERSECTS;
+    const OR_AND_INTERSECTS         = 11;
+    const RIGHT_JOIN_INTERSECTS     = 11;
 
     /* Хотя бы один кортеж ключа пересекается хотя бы с одним кортежем замка */
-    const OR_OR_INTERSECTS       = 12;
-    /* SQL-алиас: SEMI JOIN (пересечение) */
-    const SEMI_JOIN_INTERSECTS   = self::OR_OR_INTERSECTS;
+    const OR_OR_INTERSECTS          = 12;
+    const SEMI_JOIN_INTERSECTS      = 12;
 
 
 
     private static array $alg =
     [
+        self::UNKNOWN                => 'unknown',
         self::AND_AND_EQUALS         => 'and-and-equals',
         self::AND_OR_EQUALS          => 'and-or-equals',
         self::OR_AND_EQUALS          => 'or-and-equals',
@@ -98,7 +90,7 @@ class Cp
         self::AND_AND_INTERSECTS     => 'and-and-intersects',
         self::AND_OR_INTERSECTS      => 'and-or-intersects',
         self::OR_AND_INTERSECTS      => 'or-and-intersects',
-        self::OR_OR_INTERSECTS       => 'or-or-intersects',
+        self::OR_OR_INTERSECTS       => 'or-or-intersects'
     ];
 
     private static array $sql =
@@ -114,7 +106,7 @@ class Cp
         self::AND_AND_INTERSECTS     => 'cross-join-intersects',
         self::AND_OR_INTERSECTS      => 'left-join-intersects',
         self::OR_AND_INTERSECTS      => 'right-join-intersects',
-        self::OR_OR_INTERSECTS       => 'semi-join-intersects',
+        self::OR_OR_INTERSECTS       => 'semi-join-intersects'
     ];
 
 
@@ -216,7 +208,8 @@ class Cp
         bool $aNotation = false
     )
     /*
-        строковое имя оператора или алиас, либо пустая строка при неизвестном
+        строковое имя оператора или алиас,
+        либо пустая строка при неизвестном
         коде
     */
     : string
@@ -227,6 +220,198 @@ class Cp
     }
 
 
+
+    /**************************************************************************
+        Работа с массивами CP12
+    */
+
+    /*
+        Сортирует элементы и кортежи CP12
+        Массивы должны быть приведены к виду [[],[]].
+    */
+    public static function sort
+    (
+        array & $data
+    )
+    {
+        /* Сортировка элементов внутри кортежей */
+        foreach( $data as & $t )
+        {
+            sort( $t, SORT_STRING );
+        }
+
+        /* Сортировка кортежей */
+        usort
+        (
+            $data,
+            function( $a, $b )
+            {
+                $len = min( count( $a ), count( $b ));
+
+                for( $i = 0; $i < $len; $i++ )
+                {
+                    $cmp = strcmp( $a[ $i ], $b[ $i ]);
+                    if( $cmp !== 0 )
+                        return $cmp;
+                }
+
+                return count( $a ) <=> count( $b );
+            }
+        );
+    }
+
+
+    /*
+        Normalizes input to array of tuples:
+
+        A. [] => []
+        B. [ "a", "b" ] => [[ "a", "b" ]]
+        C. [[ "a" ], "b" ] => [[ "a" ], [ "b" ]]
+        D. [[ "a", "b" ], [ "c" ]] => [[ "a", "b" ], [ "c" ]]
+    */
+    public static function normalizeArray
+    (
+        array $aInput
+    )
+    {
+        /*
+            Определели результат.
+            Case A. Для пустого значения
+        */
+        $result = [];
+
+        if( count( $aInput ) !== 0 )
+        {
+            /* Считаем количество массивов */
+            $arrays = 0;
+            foreach( $aInput as $item )
+            {
+                $arrays += is_array( $item );
+            }
+
+            if( $arrays == 0 )
+            {
+                /*
+                    Ни один из элементов не являются массивом
+                    Обернули в массив.
+                    Case B.
+                */
+                $result = [ $aInput ];
+            }
+            elseif( $arrays == count( $aInput))
+            {
+                /*
+                    Все элементы являются массивами
+                    Case D.
+                */
+                $result = $aInput;
+            }
+            else
+            {
+                /*
+                    Некоторые элементы являются массивами
+                    Case C.
+                */
+                foreach( $aInput as $item )
+                {
+                    $result[] = is_array( $item ) ? $item : [ $item ];
+                }
+            }
+        }
+
+        self::sort( $result );
+        return $result;
+    }
+
+
+
+    /*
+        Converts the string to CP12 array
+        a,b,c|d,e => [[ "a", "b", c" ],[ "d","e" ]]
+    */
+    public static function stringToArray
+    (
+        /* String vlaue */
+        string $aValue,
+        /* Delimiter for tuples */
+        string $aTupleDelimiter ='|',
+        /* Delimeter for atributes in tuples */
+        string $aAttributeDelimiter = ','
+    )
+    :array
+    {
+        $result = [];
+        if( $aValue !== '' )
+        {
+            $tuples = explode( $aTupleDelimiter, $aValue );
+            foreach( $tuples as $tuple )
+            {
+                $result[] = explode( $aAttributeDelimiter, $tuple );
+            }
+        }
+        self::sort( $result );
+        return $result;
+    }
+
+
+
+    /*
+        Converts CP12 array to CP12 string
+        [[ "a", "b", c" ],[ "d","e" ]] => a,b,c|d,e
+    */
+    public static function arrayToString
+    (
+        /* Array vlaue */
+        array $aValue,
+        /* Delimiter for tuples */
+        string $aTupleDelimiter ='|',
+        /* Delimeter for atributes in tuples */
+        string $aAttributeDelimiter = ','
+    )
+    :string
+    {
+        $parts = [];
+        foreach ( $aValue as $tuple )
+        {
+            $parts[] = implode( $aAttributeDelimiter, $tuple );
+        }
+        return implode( $aTupleDelimiter, $parts );
+    }
+
+
+
+    /*
+        Normalize any value to CP12
+    */
+    public static function normalize
+    (
+        /* Array vlaue */
+        array | string | null  $aValue,
+        /* Delimiter for tuples */
+        string $aTupleDelimiter ='|',
+        /* Delimeter for atributes in tuples */
+        string $aAttributeDelimiter = ','
+    )
+    :array
+    {
+        switch( gettype( $aValue ))
+        {
+            case 'string':
+                return self::stringToArray
+                (
+                    $aValue,
+                    $aTupleDelimiter,
+                    $aAttributeDelimiter
+                );
+            break;
+            case 'array':
+                return self::normalizeArray( $aValue );
+            break;
+            default:
+                return [];
+            break;
+        }
+    }
 
 
 
@@ -386,8 +571,14 @@ class Cp
     ): bool
     {
         foreach( $key as $k )
-            if( !array_filter( $lock, fn( $l ) => array_diff( $k, $l )))
+        {
+            $ok = true;
+            foreach( $lock as $l )
+                if( array_diff( $k, $l ))
+                    $ok = false;
+            if( $ok )
                 return true;
+        }
         return false;
     }
 
@@ -473,8 +664,21 @@ class Cp
     ): bool
     {
         foreach( $key as $k )
-            if( !array_filter( $lock, fn( $l ) => count(array_intersect( $k, $l ))))
+        {
+            $found = false;
+
+            foreach( $lock as $l )
+            {
+                if( count( array_intersect( $k, $l )))
+                {
+                    $found = true;
+                    break;
+                }
+            }
+
+            if( !$found )
                 return false;
+        }
         return true;
     }
 
