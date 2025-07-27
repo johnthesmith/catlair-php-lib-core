@@ -179,12 +179,19 @@ class Result
         $aValue = null
     )
     {
+        if( $this -> historyIndex < 0 )
+        {
+            /* Установить результат ОК если пустой массив */
+            $this -> setResult();
+        }
+
         clValueToObject
         (
             $this -> history[ $this -> historyIndex ][ 'details' ],
             $aKeyPath,
             $aValue
         );
+
         return $this;
     }
 
@@ -332,7 +339,7 @@ class Result
         return
         $this -> historyIndex < 0
         ? self::RC_OK
-        : $this -> history[ $this -> historyIndex ][ 'code' ];
+        : ( $this -> history[ $this -> historyIndex ][ 'code' ] ) ?? null;
     }
 
     /*

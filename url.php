@@ -309,6 +309,15 @@ class URL
 
         return $this->parse($url);
     }
+
+
+    /*
+        Return true for empty path and query
+    */
+    public function isEmptyUri()
+    {
+        return empty( $this -> Path ) && empty( $this -> Query );
+    }
 }
 
 

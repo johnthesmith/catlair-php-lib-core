@@ -20,6 +20,10 @@
 
 
 
+namespace catlair;
+
+
+
 class Cp
 {
     /* Все кортежи ключа равны всем кортежам замка */
@@ -92,6 +96,9 @@ class Cp
         self::OR_OR_INTERSECTS       => 'or-or-intersects'
     ];
 
+
+
+    /* Alternative nameing */
     private static array $sql =
     [
         self::AND_AND_EQUALS         => 'full-outer-join-equals',
@@ -107,6 +114,7 @@ class Cp
         self::OR_AND_INTERSECTS      => 'right-join-intersects',
         self::OR_OR_INTERSECTS       => 'semi-join-intersects'
     ];
+
 
 
     /*
@@ -181,17 +189,20 @@ class Cp
     public static function fromString
     (
         /* строковое имя оператора или sql алиас */
-        string $s
+        string | null $aVal,
+        /* умолчальное значение */
+        int $aDefault
     )
     /* числовой код оператора, или 0 если не найден */
     : int
     {
-        $key = array_search($s, self::alg, true);
-        if ($key !== false) {
+        $key = array_search( $aVal, self::$alg, true);
+        if( $key !== false )
+        {
             return $key;
         }
-        $key = array_search($s, self::sql, true);
-        return $key !== false ? $key : 0;
+        $key = array_search( $aVal, self::$sql, true );
+        return $key !== false ? $key : $aDefault;
     }
 
 
@@ -258,6 +269,7 @@ class Cp
             }
         );
     }
+
 
 
     /*
@@ -571,14 +583,19 @@ class Cp
     {
         foreach( $key as $k )
         {
-            $ok = true;
+            $ok = false;
             foreach( $lock as $l )
-                if( array_diff( $k, $l ))
-                    $ok = false;
-            if( $ok )
-                return true;
+            {
+                if( !array_diff( $k, $l ))
+                {
+                    $ok = true;
+                    break;
+                }
+            }
+            if( ! $ok )
+                return false;
         }
-        return false;
+        return true;
     }
 
 

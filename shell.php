@@ -267,7 +267,7 @@ class Shell extends Result
             /* set result code for object */
             if( $ResultCode != 0 )
             {
-                $this -> SetCode  ( $ResultCode );
+                $this -> setResult( $ResultCode );
             }
 
             if( $this -> Log != null )
@@ -322,7 +322,7 @@ class Shell extends Result
             if ( !chdir( $APath ))
             {
                 $this
-                -> SetCode('ERROR_CHANGE_DIRECTORY')
+                -> setResult( 'ERROR_CHANGE_DIRECTORY' )
                 -> Error()
                 -> Param( 'Code', $this->code )
                 -> Param( 'Path', $aPath);

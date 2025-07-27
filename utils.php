@@ -417,22 +417,22 @@ function clReplace
 {
     /* Move Source to Result */
     $Result = $ASource;
-
     $count = 0;
+    $reg = $ABegin. '[\w._-]*' . $AEnd;
 
     do
     {
         /* Split the source to lexemes */
         $Source = preg_split
         (
-            '/(' .$ABegin. '\w*' . $AEnd . ')/',
+            '/(' . $reg . ')/',
             $Result,
             0,
             PREG_SPLIT_DELIM_CAPTURE
         );
 
         /* Loop for split result */
-        $Continue = false;
+        $Continue = 0;
         foreach( $Source as $Lexeme )
         {
             /* Check the lexeme on exclude list */
@@ -451,7 +451,7 @@ function clReplace
                 (
                     preg_match
                     (
-                        '/' . $ABegin. '\w*' . $AEnd .  '/', $Lexeme
+                        '/' . $reg . '/', $Lexeme
                     )
                 )
                 {
@@ -467,6 +467,7 @@ function clReplace
 
                     /* Define value */
                     $Value = null;
+
                     if( array_key_exists( $Name, $AReplace ) )
                     {
                         /* Get value from parameters */
@@ -485,17 +486,19 @@ function clReplace
                     }
 
                     /* Continue while result not equal previous */
-                    $Continue = $Continue || $ResultBefore != $Result;
+                    $Continue += $Continue || ( $ResultBefore != $Result );
                 }
             }
         }
+
         $count ++;
+
         if( $count > 100 )
         {
-            $Continue = false;
+            $Continue ++;
         }
     }
-    while( $Continue );
+    while( $Continue != 0 );
 
     return $Result;
 }
