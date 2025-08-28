@@ -588,6 +588,9 @@ function clPreview
 
 
 
+/*
+    Return true or false values
+*/
 function clCheck
 (
     $AValue,
@@ -595,14 +598,14 @@ function clCheck
     $AFalse = null
 )
 {
-     if ( empty ( $AValue) )
+     if( empty ( $AValue ))
      {
-        if ( $AFalse == null ) $Result = null;
+        if( $AFalse == null ) $Result = null;
         else $Result = $AFalse;
      }
      else
      {
-        if ( $ATrue == null ) $Result = $AValue;
+        if( $ATrue == null ) $Result = $AValue;
         else $Result = $ATrue;
      }
      return $Result;
@@ -703,46 +706,59 @@ function clValueToObject
 function clValueFromObject
 (
     /* Array or object */
-    $AObject,
+    $aObject,
     /* Key as string or as array of sting */
-    $AKey,
+    $aKey,
     /* Default value */
-    $ADefault = null
+    $aDefault = null
 )
 {
-    $Result = $ADefault;
-    switch( gettype( $AKey ))
+    if( !is_array( $aKey ))
     {
-        case 'array':
-            if( count( $AKey ) > 1 )
-            {
-                $Key = array_shift( $AKey );
-                $Object = clValueFromObject( $AObject, $Key, $ADefault );
-                $Result = clValueFromObject( $Object,  $AKey, $ADefault);
-            }
-            else
-            {
-                $Result = clValueFromObject( $AObject, $AKey[ 0 ], $ADefault );
-            }
-        break;
-        default:
-            switch ( gettype( $AObject ))
-            {
-                case 'array':
-                    $Result
-                    = array_key_exists( $AKey, $AObject )
-                    ? $AObject[ $AKey ]
-                    : $ADefault;
-                break;
-                case 'object':
-                    $Result = property_exists( $AObject, $AKey )
-                    ? $AObject -> $AKey
-                    : $ADefault;
-                break;
-            }
-        break;
+        $aKey = [ $aKey ];
     }
-    return $Result;
+
+    $v = $aObject;
+    foreach( $aKey as $k )
+    {
+        if( is_array( $v ) && array_key_exists( $k, $v ))
+        {
+            $v = $v[ $k ];
+        }
+        elseif( is_object( $v ) && property_exists( $v, $k ))
+        {
+            $v = $v -> $k;
+        }
+        else
+        {
+            return $aDefault;
+        }
+    }
+
+    return $v;
+}
+
+
+
+/*
+    Return values from array to destination variables
+*/
+function clValuesFromObject
+(
+    /* Source array or object */
+    $aSource,
+    /* Map array [ [ 'path', 'subpath' ], 'default' ] */
+    array $aMap,
+    /* Destination variables */
+    &...$aVars
+)
+{
+    foreach( $aMap as $i => $item )
+    {
+        $path    = $item[0];
+        $default = $item[1] ?? null;
+        $aVars[ $i ] = clValueFromObject( $aSource, $path, $default );
+    }
 }
 
 
@@ -752,42 +768,36 @@ function clValueFromObject
 */
 function clValueExists
 (
-    $AObject,           /* Array or object */
-    $AKey               /* Key as string or as array of sting */
+    /* Array or object */
+    $aObject,
+    /* Key as string or as array of sting */
+    $aKey
 )
 {
-    $Result = false;
-    switch( gettype( $AKey ))
+    if( !is_array( $aKey ))
     {
-        case 'array':
-            if( count( $AKey ) > 1 )
-            {
-                $Key = array_shift( $AKey );
-                $Object = clValueFromObject( $AObject, $Key );
-                $Result = clValueFromObject( $Object, $AKey );
-            }
-            else
-            {
-                $Result = clValueExists( $AObject, $AKey[ 0 ] );
-            }
-        break;
-        default:
-            switch ( gettype( $AObject ))
-            {
-                case 'array':
-                    $Result = array_key_exists( $AKey, $AObject );
-                break;
-                case 'object':
-                    $Result = property_exists( $AObject, $AKey );
-                break;
-            }
-        break;
+        $aKey = [ $aKey ];
     }
-    return $Result;
+
+    $v = $aObject;
+    foreach( $aKey as $k )
+    {
+        if( is_array( $v ) && array_key_exists( $k, $v ))
+        {
+            $v = $v[$k];
+        }
+        elseif( is_object( $v ) && property_exists( $v, $k ))
+        {
+            $v = $v->$k;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    return $true;
 }
-
-
-
 
 
 
@@ -818,7 +828,6 @@ function clValueToFloat( $AValue, $AThousandDelimeter = ' ' )
     }
     return $Value;
 }
-
 
 
 
@@ -1166,44 +1175,95 @@ function clReadPassword()
 
 
 
+/*
+   Deeply merges two arrays.
+   Old scalcr values will be overwritten.
 
+   Example:
+   $a = ['a'=>'v1','b'=>['s1'=>1]];
+   $b = ['a'=>'new','b'=>['s2'=>2],'c'=>'v3'];
 
+   Result: ['a'=>'new','b'=>['s1'=>1,'s2'=>2],'c'=>'v3']
+*/
 function clArrayMerge
 (
-    &$A1,
-    &$A2
+    array $a,
+    array $b
 )
+:array
 {
-    $Result = $A1;
+    $result = $a;
 
-    foreach( $A2 as $key => &$value )
+    foreach( $b as $key => &$value )
     {
         if
         (
             is_array( $value ) &&
-            isset( $Result[ $key ]) &&
-            is_array ( $Result[ $key ])
+            isset( $result[ $key ]) &&
+            is_array ( $result[ $key ])
         )
         {
-            $Result[ $key ] = clArrayMerge
+            $result[ $key ] = clArrayMerge
             (
-                $Result[ $key ],
+                $result[ $key ],
                 $value
             );
         }
         else
         {
-            $Result[ $key ] = $value;
+            $result[ $key ] = $value;
         }
     }
 
-    return $Result;
+    return $result;
 }
 
 
 
 /*
+   Deeply merges two arrays
+   Old scalar values will *not* be overwritten.
 
+   Example:
+   $a = ['a'=>'v1','b'=>['s1'=>1]];
+   $b = ['a'=>'new','b'=>['s2'=>2],'c'=>'v3' ];
+
+   Result: ['a'=>'v1','b'=>['s1'=>1,'s2'=>2],'c'=>'v3' ]
+*/
+function clArrayMergeAppend
+(
+    array $a,
+    array $b
+)
+:array
+{
+    foreach( $b as $key => $value)
+    {
+        if( is_int( $key ))
+        {
+            $a[] = $value;
+        }
+        elseif
+        (
+            isset( $a[ $key ]) &&
+            is_array( $a[ $key ]) &&
+            is_array( $value )
+        )
+        {
+            $a[ $key ] = clArrayMergeAppend( $a[ $key ], $value );
+        }
+        elseif( $value !== null )
+        {
+            $a[ $key ] = $value;
+        }
+    }
+    return $a;
+}
+
+
+
+
+/*
     Дополняет элементами второго массива первый с глубоким объединением
     массивов, без замены скалярных значений.
 

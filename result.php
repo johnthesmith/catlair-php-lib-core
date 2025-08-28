@@ -111,7 +111,7 @@ class Result
 
 
     /*
-        Установка результата из массива
+        Return result fields as array
     */
     public function getResultAsArray()
     {
