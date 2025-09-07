@@ -203,7 +203,10 @@ class URL
 
 
 
-    public function setPath( $AValue = [] )
+    public function setPath
+    (
+        array $AValue = []
+    )
     {
         $this -> Path = $AValue;
         $this -> Changed = true;
