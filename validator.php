@@ -57,7 +57,7 @@ class Validator
             "94" => ["country" => "Sri Lanka", "mask" => "+94 ## #######"],
             "95" => ["country" => "Myanmar", "mask" => "+95 ## #######"],
             "98" => ["country" => "Iran", "mask" => "+98 ## #######"],
-            "99" => ["country" => "Kazakhstan", "mask" => "+99 ## #######"]
+            "995" => ["country" => "Georgian", "mask" => "+995 ### ### ###"]
         ]
     ];
 
