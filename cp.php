@@ -183,6 +183,19 @@ class Cp
 
 
     /*
+        Выполняет валиадцию строки
+    */
+    public static function validateString
+    (
+        string | null $a
+    )
+    {
+        return self::fromString( $a, self::UNKNOWN ) != self::UNKNOWN;
+    }
+
+
+
+    /*
         Преобразует строковое имя оператора (базовое или SQL-алиас)
         в числовой код константы класса.
     */
@@ -191,7 +204,7 @@ class Cp
         /* строковое имя оператора или sql алиас */
         string | null $aVal,
         /* умолчальное значение */
-        int $aDefault
+        int $aDefault = self::AND_OR_EQUALS
     )
     /* числовой код оператора, или 0 если не найден */
     : int
