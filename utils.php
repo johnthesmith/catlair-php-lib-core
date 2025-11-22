@@ -411,7 +411,14 @@ function clReplace
     string $AEnd        = '%',
     /* List of exclude Keynames */
     array  $AExclude    = [],
-    /* Callback function(string $AKeyName) return KeyValue */
+    /*
+        Callback for extract value
+        function
+        (
+            $array,
+            $key
+        )
+    */
     $ACallback          = null
 )
 {
@@ -473,16 +480,32 @@ function clReplace
                         /* Get value from parameters */
                         $Value = $AReplace[ $Name ];
                     }
-                    elseif( ! empty( $ACallback ))
+
+                    if( !empty( $ACallback ))
                     {
                         /* Get value from callback function by Name */
-                        $Value = call_user_func( $ACallback, $Name );
+                        $Value = call_user_func( $ACallback, $AReplace, $Name );
+                    }
+                    else
+                    {
+                        if( array_key_exists( $Name, $AReplace ) )
+                        {
+                            /* Get value from parameters */
+                            $Value = $AReplace[ $Name ];
+                        }
                     }
 
-                    /* Replace */
-                    if( $Value !== null )
+                    switch( gettype( $Value ))
                     {
-                        $Result = str_replace( $Lexeme, $Value, $Result );
+                        case 'boolean':
+                        case 'integer':
+                        case 'double':
+                        case 'string':
+                            $Result = str_replace( $Lexeme, $Value, $Result );
+                        break;
+                        default:
+                            /* null, array, object, resource — пропуск */
+                        break;
                     }
 
                     /* Continue while result not equal previous */
@@ -797,6 +820,63 @@ function clValueExists
     }
 
     return $true;
+}
+
+
+
+/*
+    Convert any value  in to plant string
+    with ordinary delimiter
+*/
+function clValueToString
+(
+    $AValue,
+    $ADelimiter = ' '
+)
+:string
+{
+    $result = [];
+
+    $process = function( $val)
+    use( &$process, &$result, $ADelimiter )
+    {
+        switch( gettype( $val ))
+        {
+            case 'array':
+                foreach( $val as $v ) $process( $v );
+            break;
+
+            case 'string':
+                $result[] = $val;
+            break;
+
+            case 'boolean':
+                $result[] = $val ? 'true' : 'false';
+            break;
+
+            case 'integer':
+            case 'double':   /* float */
+                $result[] = ( string )$val;
+            break;
+
+            case 'object':
+                if( method_exists( $val, '__toString' ))
+                {
+                    $result[] = (string) $val;
+                }
+            break;
+
+            case 'NULL':
+            case 'resource':
+            case 'resource (closed)':
+            default:
+                /* игнорируем */
+            break;
+        }
+    };
+
+    $process( $AValue );
+    return implode( $ADelimiter, $result );
 }
 
 
