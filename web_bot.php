@@ -34,12 +34,14 @@ class WebBot extends Params
 
     private $Url                = null;
     private $Post               = null;
-    private $Content            = null;
+    private $content            = null;
     private $Answer             = null; /* Object JSON, DOM, or other*/
-    private $Handle             = null; /* Current request handle */
     private $DumpContent        = false;
     private $RequestTimeoutMls  = 1000; /* Length of request at mls befor drop down it */
     private $contentType        = null;
+
+    /* Headers input buffer */
+    private $headers            = [];
 
     /*
         Constructor
@@ -72,76 +74,113 @@ class WebBot extends Params
     {
         $URL = $this -> getUrl() -> toString();
         $this -> Log -> Begin() -> Param( 'URL', $URL );
-        $Handle = curl_init();
-
-        curl_setopt( $Handle, CURLOPT_URL, $URL );
-
-
-        /* Build POST parameters  for CURL */
-        $Keys = [];
-        foreach( $this -> Post -> GetParams() as $Key => $Value )
+        if( !function_exists( 'curl_init' ))
         {
-            switch( gettype( $Value ))
-            {
-                /* Bool value converted to string */
-                case 'bool':
-                    $Value = $Value ? 'true' : 'false';
-                break;
-                /* Array or object values converted to json */
-                case 'array':
-                case 'object':
-                    $Value = json_encode
-                    (
-                        $Value,
-                        JSON_UNESCAPED_UNICODE|
-                        JSON_UNESCAPED_SLASHES
-                    );
-                break;
-            }
-            /* Key and value converted to URI */
-            array_push
+            $this -> setResult
             (
-                $Keys,
-                encodeURIComponent( $Key ) . '=' . encodeURIComponent( $Value )
+                'curl-sdk-not-found',
+                [
+                    'msg' => 'Need to install php_curl'
+                ]
             );
         }
-        $ParamsString = implode( '&', $Keys );
-
-        /* Set post URL for CURL */
-        if( !empty( $ParamsString ))
+        else
         {
-            curl_setopt( $Handle, CURLOPT_POST, true);
-            curl_setopt( $Handle, CURLOPT_POSTFIELDS, $ParamsString );
+            $handle = curl_init();
+            curl_setopt( $handle, CURLOPT_URL, $URL );
+
+            /* Build POST parameters  for CURL */
+            $Keys = [];
+            foreach( $this -> Post -> GetParams() as $Key => $Value )
+            {
+                switch( gettype( $Value ))
+                {
+                    /* Bool value converted to string */
+                    case 'bool':
+                        $Value = $Value ? 'true' : 'false';
+                    break;
+                    /* Array or object values converted to json */
+                    case 'array':
+                    case 'object':
+                        $Value = json_encode
+                        (
+                            $Value,
+                            JSON_UNESCAPED_UNICODE|
+                            JSON_UNESCAPED_SLASHES
+                        );
+                    break;
+                }
+                /* Key and value converted to URI */
+                array_push
+                (
+                    $Keys,
+                    encodeURIComponent( $Key ) . '=' . encodeURIComponent( $Value )
+                );
+            }
+            $ParamsString = implode( '&', $Keys );
+
+            /* Set post URL for CURL */
+            if( !empty( $ParamsString ))
+            {
+                curl_setopt( $handle, CURLOPT_POST, true);
+                curl_setopt( $handle, CURLOPT_POSTFIELDS, $ParamsString );
+            }
+
+            curl_setopt( $handle, CURLOPT_ENCODING, '');
+            curl_setopt( $handle, CURLOPT_HEADER, true );
+            curl_setopt( $handle, CURLOPT_RETURNTRANSFER, 1 );
+            curl_setopt( $handle, CURLOPT_NOSIGNAL, 1);
+            curl_setopt( $handle, CURLOPT_TIMEOUT_MS, $this -> RequestTimeoutMls );
+
+            /* Build headers */
+            $curlHeaders = [];
+            foreach( $this -> headers as $name => $value )
+            {
+               $curlHeaders[] = $name . ': ' . $value;
+            }
+            /* Apply headers */
+            curl_setopt( $handle, CURLOPT_HTTPHEADER, $curlHeaders );
+
+            /*
+                Send request
+            */
+            $response = curl_exec( $handle );
+
+            /* Separate headers and body */
+            $headerSize = curl_getinfo( $handle, CURLINFO_HEADER_SIZE );
+            $rawHeaders = substr( $response, 0, $headerSize );
+            $this -> content = substr( $response, $headerSize );
+
+            /* Headers parsing */
+            $this -> headers = [];
+            $lines = explode( "\r\n", trim( $rawHeaders ) );
+            foreach( $lines as $line )
+            {
+                if( strpos($line, ':') !== false )
+                {
+                    $parts = explode(':', $line, 2 );
+                    $this -> headers[ trim( $parts[ 0 ])] = trim( $parts[ 1 ]);
+                }
+            }
+
+            /* Error processing */
+            $error = curl_error( $handle );
+            if( !empty( $error ))
+            {
+                $this -> setResult( 'request-error', [ 'msg' => $error ]);
+            }
+
+            /* Set content type */
+            $this -> contentType = curl_getinfo( $handle, CURLINFO_CONTENT_TYPE );
+
+            /* Closw curl */
+            curl_close( $handle );
+
+            if( $this -> isOk() && $this -> DumpContent )
+            {
+                $this -> getLog() -> dump( $this -> getContent());
+            }
         }
-
-//        curl_setopt( $Handle, CURLOPT_MAXCONNECTS, 1 );
-//        curl_setopt( $Handle, CURLOPT_FORBID_REUSE, 1 );
-
-        curl_setopt( $Handle, CURLOPT_RETURNTRANSFER, 1 );
-        curl_setopt( $Handle, CURLOPT_NOSIGNAL, 1);
-        curl_setopt( $Handle, CURLOPT_TIMEOUT_MS, $this -> RequestTimeoutMls );
-
-        /* Send request */
-        $this -> Content = curl_exec( $Handle );
-
-        /* Error processing */
-        $error = curl_error( $Handle );
-        if( !empty( $error ))
-        {
-            $this -> setResult( 'web_bot/RequestError', [ 'Message' => $error ] );
-        }
-
-        /* Set content type */
-        $this -> contentType = curl_getinfo( $Handle, CURLINFO_CONTENT_TYPE );
-
-        /* Closw curl */
-        curl_close( $Handle );
-
-        if( $this -> isOk() && $this -> DumpContent )
-        {
-            $this -> getLog() -> dump( $this -> getContent());
-        }
-
         $this -> Log -> End();
         return $this;
     }
@@ -150,7 +189,7 @@ class WebBot extends Params
 
     public function getContent()
     {
-        return $this -> Content;
+        return $this -> content;
     }
 
 
@@ -173,7 +212,7 @@ class WebBot extends Params
     {
         if( $this -> IsOk() )
         {
-            if( empty( $this -> Content ))
+            if( empty( $this -> content ))
             {
                 $this -> Answer =
                 [
@@ -184,7 +223,7 @@ class WebBot extends Params
             {
                 $this -> Answer = json_decode
                 (
-                    $this -> Content,
+                    $this -> content,
                     true
                 );
                 if( empty( $this -> Answer ))
@@ -194,7 +233,7 @@ class WebBot extends Params
                         'web_bot/json_error',
                         [
                             'url' => $this -> getUrl() -> toString(),
-                            'content' => $this -> Content
+                            'content' => $this -> content
                         ]
                     );
                 }
@@ -207,7 +246,7 @@ class WebBot extends Params
 
     public function getAnswer()
     {
-        return empty( $this -> Answer ) ? $this -> Content : $this -> Answer;
+        return empty( $this -> Answer ) ? $this -> content : $this -> Answer;
     }
 
 
@@ -216,11 +255,11 @@ class WebBot extends Params
     {
         if( $this -> IsOk() )
         {
-            $Lines = explode( PHP_EOL, $this -> Content );
+            $Lines = explode( PHP_EOL, $this -> content );
             $this -> Answer = new DOMDocument();
 
             $Last = libxml_use_internal_errors(true);
-            $this -> Answer -> loadHTML( $this -> Content );
+            $this -> Answer -> loadHTML( $this -> content );
 
             foreach ( libxml_get_errors() as $error)
             {
@@ -369,6 +408,33 @@ class WebBot extends Params
     public function getContentType()
     {
         return $this -> contentType;
+    }
+
+
+
+    /*
+        Set http headers key => value
+    */
+    public function setHeaders
+    (
+        /* Массив заголовков (ключ => значение) */
+        array $a
+    )
+    :self
+    {
+        $this -> headers = $a;
+        return $this;
+    }
+
+
+
+    /*
+        Set http headers key => value
+    */
+    public function getHeaders()
+    :array
+    {
+        return $this -> headers;
     }
 }
 

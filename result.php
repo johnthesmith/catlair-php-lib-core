@@ -89,21 +89,12 @@ class Result
     (
         array $aSource
     )
+    :self
     {
         $this -> setResult
         (
-            (string) clValueFromObject
-            (
-                $aSource,
-                [ 'result', 'code' ],
-                'unknown_error'
-            ),
-            (array) clValueFromObject
-            (
-                $aSource,
-                [ 'result', 'details' ],
-                []
-            )
+            $aSource[ 0 ][ 'code' ] ?? 'unknown_error',
+            $aSource[ 0 ][ 'details' ] ?? []
         );
         return $this;
     }
@@ -117,7 +108,6 @@ class Result
     {
         return
         [
-            'result' =>
             [
                 'code'    => $this -> getCode(),
                 'details' => $this -> getDetails()
@@ -341,6 +331,8 @@ class Result
         ? self::RC_OK
         : ( $this -> history[ $this -> historyIndex ][ 'code' ] ) ?? null;
     }
+
+
 
     /*
         Return details array

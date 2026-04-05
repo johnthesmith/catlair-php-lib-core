@@ -51,13 +51,19 @@ class Mon extends Params
     const CMD_MIN       = 'min';
     const CMD_MAX       = 'max';
     const CMD_SORT      = 'sort';
-    const CMD_SIZE      = 'size';   /* Расчет размера в байтах или иных единицах */
-    const CMD_CUT       = 'cut';    /* Команда обрезания массива до указанной длинны */
+    /* Расчет размера в байтах или иных единицах */
+    const CMD_SIZE      = 'size';
+    /* Команда обрезания массива до указанной длинны */
+    const CMD_CUT       = 'cut';
 
-    const SORT_BY_VALUE = 'val';    /* Тип сортировки по значениям */
-    const SORT_BY_KEY   = 'key';    /* Тип сортировки по ключу */
-    const SORT_ORDER_ZA = 'za';     /* Тип сортировки za */
-    const SORT_ORDER_AZ = 'az';     /* Тип сортировки az */
+    /* Тип сортировки по значениям */
+    const SORT_BY_VALUE = 'val';
+    /* Тип сортировки по ключу */
+    const SORT_BY_KEY   = 'key';
+    /* Тип сортировки za */
+    const SORT_ORDER_ZA = 'za';
+    /* Тип сортировки az */
+    const SORT_ORDER_AZ = 'az';
 
     /* Приватные состояния */
     private $Log            = null; /* Объект логирования */
@@ -473,7 +479,9 @@ class Mon extends Params
     */
 
 
-
+    /*
+        Загрузка состояния мониторинга
+    */
     public function read
     (
         string $AFile = null
@@ -481,14 +489,17 @@ class Mon extends Params
     {
         $result = [];
         $AFile = empty( $AFile ) ? $this -> getFilePathName() : $AFile;
-        if( !empty( $AFile ))
+
+        if( !empty( $AFile ) && file_exists( $AFile ))
         {
-            /* Читаем файл */
-            $size = filesize( $AFile );
-            $content = $size > 0 ?  file_get_contents( $AFile ) : '';
-            $json = json_decode( trim( $content ), true );
-            $result = empty( $json ) ? [] : $json;
+            $handle = @fopen( $AFile, 'r' );
+            if( $handle !== false )
+            {
+                $result = $this -> internalRead( $handle );
+                fclose( $handle );
+            }
         }
+
         return $result;
     }
 
@@ -515,7 +526,7 @@ class Mon extends Params
                     if( flock( $handle, LOCK_EX ))
                     {
                         /* Читаем файл */
-                        $json = $this -> read( $AFile );
+                        $json = $this -> internalRead( $handle );
                         $this -> setParams( $json );
 
                         /* Транкируем файл */
@@ -554,12 +565,12 @@ class Mon extends Params
                 }
                 else
                 {
-                    $this -> setResult( 'MonitorFileOpenError' );
+                    $this -> setResult( 'monitor-file-open-error' );
                 }
             }
             else
             {
-                $this -> setResult( 'MonitorFilePathError' );
+                $this -> setResult( 'monitor-file-path-error' );
             }
         }
 
@@ -834,5 +845,28 @@ class Mon extends Params
             unlink( $AFile );
         }
         return $this;
+    }
+
+
+
+    /*
+       Чтение состояния через уже открытый дескриптор
+    */
+    private function internalRead
+    (
+        $handle
+    )
+    {
+        $result = [];
+
+        if( $handle !== null )
+        {
+            rewind( $handle );
+            $content = stream_get_contents( $handle );
+            $json = empty( $content ) ? [] : json_decode( trim( $content ), true );
+            $result = is_array( $json ) ? $json : [];
+        }
+
+        return $result;
     }
 }

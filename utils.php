@@ -425,7 +425,7 @@ function clReplace
     /* Move Source to Result */
     $Result = $ASource;
     $count = 0;
-    $reg = $ABegin. '[\w._-]*' . $AEnd;
+    $reg = $ABegin. '[^%]+' . $AEnd;
 
     do
     {
@@ -819,7 +819,7 @@ function clValueExists
         }
     }
 
-    return $true;
+    return true;
 }
 
 
@@ -1342,7 +1342,6 @@ function clArrayMergeAppend
 
 
 
-
 /*
     Дополняет элементами второго массива первый с глубоким объединением
     массивов, без замены скалярных значений.
@@ -1386,6 +1385,95 @@ function clArrayAppend
 
 
 /*
+    Normalize path
+        a//b -> a/b
+        a/../b -> b
+        ../a/b -> ../a/b
+        a/./b -> a/b
+        /a/b -> /a/b
+        ./a/b -> ./a/b
+*/
+function clNormalizePath
+(
+    string $aPath
+)
+{
+    /*
+        Save prefix
+    */
+    $isAbsolute = false;
+    $prefix     = '';
+
+    if ( str_starts_with ( $aPath, '/' ) )
+    {
+        $isAbsolute = true;
+    }
+    else if ( str_starts_with ( $aPath, './' ) )
+    {
+        $prefix = './';
+        $aPath  = substr ( $aPath, 2 );
+    }
+    else if ( str_starts_with ( $aPath, '../' ) )
+    {
+        /*
+            Keep leading ../ chain
+        */
+        while ( str_starts_with ( $aPath, '../' ) )
+        {
+            $prefix .= '../';
+            $aPath   = substr ( $aPath, 3 );
+        }
+    }
+
+    /*
+        Split and normalize
+    */
+    $parts = explode ( '/', $aPath );
+    $stack = [];
+
+    foreach ( $parts as $part )
+    {
+        if ( $part === '' || $part === '.' )
+        {
+            continue;
+        }
+
+        if ( $part === '..' )
+        {
+            if
+            (
+                ! empty ( $stack )
+            )
+            {
+                array_pop ( $stack );
+            }
+            else if ( ! $isAbsolute )
+            {
+                $prefix .= '../';
+            }
+        }
+        else
+        {
+            $stack[] = $part;
+        }
+    }
+
+    /*
+        Build result
+    */
+    $result = implode ( '/', $stack );
+
+    if ( $isAbsolute )
+    {
+        return '/' . $result;
+    }
+
+    return $prefix . $result;
+}
+
+
+
+/*
     Converts a given path to a canonical form and ensures it is within the
     allowed root directory. Returns the canonical path or false if invalid or
     outside the root directory.
@@ -1399,7 +1487,8 @@ function clCanonicalPath
     $normalize = function($path)
     {
         $parts = [];
-        foreach( explode('/', str_replace('\\', '/', $path )) as $part) {
+        foreach( explode('/', str_replace('\\', '/', $path )) as $part)
+        {
             if( $part === '' || $part === '.' ) continue;
             if( $part === '..' ) array_pop( $parts );
             else $parts[] = $part;

@@ -30,19 +30,28 @@ namespace catlair;
 */
 function ip4Range
 (
-    $aIp,   /* Checing ipv4 adress for example 127.0.0.1 */
-    $aRange /* ip Subnet/mask for example 127.0.0.0/16, or ip */
-) : bool
+    /* Checing ipv4 adress for example 127.0.0.1 */
+    string $aIp,
+    /* ip Subnet/mask for example 127.0.0.0/16, or ip */
+    string $aRange
+)
+: bool
 {
-    $range = explode( '/', $aRange);
-    switch( count( $range ))
+    $range = explode( '/', $aRange );
+    $result = false;
+    if( count($range) === 1 )
     {
-        case 0: return false;
-        case 1: return $aIp == $aRange;
-        default:
-            $range_start = ip2long( $range[ 0 ]);
-            $range_end  = $range_start + pow(2, 32 - intval( $range[1] )) - 1;
-            $ip = ip2long( $aIp );
-            return $ip >= $range_start && $ip <= $range_end;
+        $result = $aIp === $aRange;
     }
+    else
+    {
+        $subnet = ip2long($range[0]);
+        $mask = (int)$range[1];
+        $ip = ip2long($aIp);
+        /* Маска в битовом представлении */
+        $maskLong = -1 << (32 - $mask);
+
+        $result = ($ip & $maskLong) === ($subnet & $maskLong);
+    }
+    return $result;
 }

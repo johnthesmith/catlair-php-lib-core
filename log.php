@@ -1339,7 +1339,6 @@ class Log extends Result
         if( $this -> TrapEnabled )
         {
             $this -> lineEnd();
-            array_pop( $this -> TrapStack );
         }
         return $this;
     }
@@ -1348,16 +1347,18 @@ class Log extends Result
 
     public function setTrapEnabled
     (
-        bool $AValue = true
+        bool $a = true
     )
+    :self
     {
-        $this -> TrapEnabled = $AValue;
+        $this -> TrapEnabled = $a;
         return $this;
     }
 
 
 
     public function getTrapEnabled()
+    :bool
     {
         return  $this -> TrapEnabled;
     }

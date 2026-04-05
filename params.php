@@ -183,7 +183,8 @@ class Params extends Result
     */
     public function addParams
     (
-        $AParams, /* Объект или массив, содержащие ключ=>значение*/
+        /* Объект или массив, содержащие ключ=>значение*/
+        $AParams,
         bool $ANotExists = false
     )
     {

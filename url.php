@@ -23,8 +23,6 @@ namespace catlair;
 */
 
 
-require_once 'params.php';
-
 class URL
 {
     private $Changed     = false;   /* Url change indicator */
@@ -59,10 +57,9 @@ class URL
         $this -> Path       = array_key_exists( 'path',     $URL ) ? $URL[ 'path' ]     : '';
 
         /* URL parameters */
-        $Params = null;
-        parse_str( $this -> Query, $Params );
-        $this -> Params = new Params();
-        $this -> Params -> setParams( $Params );
+        $params = [];
+        parse_str( $this -> Query, $params );
+        $this -> Params = $params;
 
         /* URL path */
         $this -> Path
@@ -88,7 +85,6 @@ class URL
 
         /* Host */
         $Result .= $this -> Host;
-
         /* Port */
         if( !empty( $this -> Port )) $Result .= ':' . $this -> Port;
 
@@ -96,13 +92,9 @@ class URL
         if( !empty( $this -> Path ) ) $Result .= '/' . implode( '/', $this -> Path );
 
         /* Params */
-        if
-        (
-            !empty( $this -> Params ) &&
-            !empty( $this -> Params -> getParams())
-        )
+        if( !empty( $this -> Params ))
         {
-            $Result .= '?' . $this -> Params -> GetParamsAsURL();
+            $Result .= '?' . http_build_query( $this -> Params );
         }
 
         /* Hash */
@@ -115,7 +107,7 @@ class URL
 
     public function clearParams()
     {
-        $this -> Params = new Params();
+        $this -> Params = [];
         $this -> Changed = true;
         return $this;
     }
@@ -191,6 +183,17 @@ class URL
 
 
 
+    /*
+        Return host from url
+    */
+    public function getHost()
+    :string
+    {
+        return $this -> Host;
+    }
+
+
+
     public function setPort
     (
         string $AValue = null
@@ -234,11 +237,9 @@ class URL
         $this -> Path       = array_key_exists( 'path',     $URL ) ? $URL[ 'path' ]     : '';
 
         /* URL parameters */
-        $Params = null;
-        parse_str( $this -> Query, $Params );
-
-        $this -> Params = new Params();
-        $this -> Params -> setParams( $Params );
+        $params = [];
+        parse_str( $this -> Query, $params );
+        $this -> Params = $params;
 
         /* URL path */
         $this -> Path
@@ -256,33 +257,45 @@ class URL
 
     public function setParam
     (
-        string $AName,
-        $AValue = null
+        string $aName,
+        $aValue = null
     )
     {
-        $this -> Params -> setParam( $AName, $AValue );
+        $this -> Params[ $aName ] = $aValue;
         $this -> Changed = true;
         return $this;
     }
 
 
 
+
     public function getParam
     (
-        string  $AName,
-        $ADefault = null
+        string $aName,
+        $aDefault = null
     )
     {
-        return $this -> Params -> getParam( $AName, $ADefault );
+        return $this -> Params[ $aName ] ?? $aDefault;
     }
 
 
 
     public function getParams()
     {
-        return $this -> Params -> getParams();
+        return $this -> Params;
     }
 
+
+
+    public function setParams
+    (
+        array $a
+    )
+    :self
+    {
+        $this -> Params = $a;
+        return $this;
+    }
 
 
     public function setHash( $AValue = null )
@@ -301,16 +314,10 @@ class URL
     {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $port   = $_SERVER['SERVER_PORT'] ?? (($scheme === 'https') ? 443 : 80);
         $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 
-        // Учитываем порт, если он нестандартный
-        $defaultPort = ($scheme === 'https') ? 443 : 80;
-        $hostWithPort = ($port != $defaultPort) ? "$host:$port" : $host;
-
-        $url = "$scheme://$hostWithPort$uri";
-
-        return $this->parse($url);
+        $url = "$scheme://$host$uri";
+        return $this->parse( $url );
     }
 
 
@@ -322,24 +329,3 @@ class URL
         return empty( $this -> Path ) && empty( $this -> Query );
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

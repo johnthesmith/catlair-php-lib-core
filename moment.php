@@ -115,7 +115,7 @@ class Moment
     /*
         Create and return a new moment
     */
-    static function &Create
+    static function create
     (
         $AString = null, $ATimezone = 0, $AUTC = false
     )
@@ -129,11 +129,22 @@ class Moment
     /*
         This moment return current value
     */
-    public function Get( $AUTC = false )
+    public function get
+    (
+        $AUTC = false
+    )
     {
         return $this -> IsEmpty()
         ? $this -> Moment
-        : ( $this -> Moment + (( $AUTC ) ? self::EMPTY : $this -> TimezoneShift ));
+        :
+        (
+            $this -> Moment +
+            (
+                $AUTC
+                ? self::EMPTY
+                : $this -> TimezoneShift
+            )
+        );
     }
 
 
@@ -141,7 +152,7 @@ class Moment
     /*
         This moment set to value
     */
-    public function &Set( $AValue, $AUTC = false )
+    public function &set( $AValue, $AUTC = false )
     {
         $this -> Moment
         = empty( $AValue ) || $AValue == self::EMPTY
