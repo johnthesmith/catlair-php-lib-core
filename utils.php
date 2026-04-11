@@ -402,128 +402,82 @@ function clObjectToContent
 function clReplace
 (
     /* Source content for raplace */
-    string $ASource,
+    string $aSource,
     /* Array of pairs key => value */
-    array  $AReplace,
+    array $aReplace,
     /* Begin of macro */
-    string $ABegin      = '%',
-    /* EndOfMacro */
-    string $AEnd        = '%',
-    /* List of exclude Keynames */
-    array  $AExclude    = [],
-    /*
-        Callback for extract value
-        function
-        (
-            $array,
-            $key
-        )
-    */
-    $ACallback          = null
+    string $aDelimiter = '%',
+    /* Exclude key list */
+    array $aExclude = []
 )
 {
-    /* Move Source to Result */
-    $Result = $ASource;
-    $count = 0;
-    $reg = $ABegin. '[^%]+' . $AEnd;
+    /* Let source */
+    $source = $aSource;
+    /* Let final result */
+    $result = '';
+    /* Count of loop for %a%, [ 'a' => '%b%', 'b' => '%a%' ]*/
+    $loop   = 20;
+    $emptyExclude = empty( $aExclude );
 
+    /* Main loop */
     do
     {
-        /* Split the source to lexemes */
-        $Source = preg_split
-        (
-            '/(' . $reg . ')/',
-            $Result,
-            0,
-            PREG_SPLIT_DELIM_CAPTURE
-        );
+        /* Build array o keys */
+        $parts = explode( $aDelimiter, $source );
 
-        /* Loop for split result */
-        $Continue = 0;
-        foreach( $Source as $Lexeme )
+        $accum = [];
+        $i = 0;
+        $c = count( $parts );
+        $repl = false;
+        for( $i=0; $i < $c; $i++ )
         {
-            /* Check the lexeme on exclude list */
-            $ExcludeFlag = false;
-
-            foreach( $AExclude as $Item )
+            $part = $parts[ $i ];
+            if( $i == 0 )
             {
-                $ExcludeFlag
-                = $ExcludeFlag || ( $ABegin . $Item . $AEnd == $Lexeme );
+                $accum[] = $part;
             }
-
-            /* Replace for unexcluded */
-            if( ! $ExcludeFlag )
+            else
             {
-                if
-                (
-                    preg_match
+                    if
                     (
-                        '/' . $reg . '/', $Lexeme
+                        array_key_exists( $part, $aReplace ) &&
+                        (
+                            $emptyExclude ||
+                            !array_key_exists( $part, $aExclude )
+                        )
                     )
-                )
-                {
-                    $ResultBefore = $Result;
-
-                    /* Define name */
-                    $Name = str_replace
-                    (
-                        [ $ABegin, $AEnd ],
-                        [ '','' ],
-                        $Lexeme
-                    );
-
-                    /* Define value */
-                    $Value = null;
-
-                    if( array_key_exists( $Name, $AReplace ) )
                     {
-                        /* Get value from parameters */
-                        $Value = $AReplace[ $Name ];
-                    }
-
-                    if( !empty( $ACallback ))
-                    {
-                        /* Get value from callback function by Name */
-                        $Value = call_user_func( $ACallback, $AReplace, $Name );
+                        $accum[] = clValueToString( $aReplace[ $part ]);
+                        $repl = true;
                     }
                     else
                     {
-                        if( array_key_exists( $Name, $AReplace ) )
+                        if( !$repl )
                         {
-                            /* Get value from parameters */
-                            $Value = $AReplace[ $Name ];
+                            $accum[] = '%';
                         }
+                        $accum[] = $part;
+                        $repl = false;
                     }
-
-                    switch( gettype( $Value ))
-                    {
-                        case 'boolean':
-                        case 'integer':
-                        case 'double':
-                        case 'string':
-                            $Result = str_replace( $Lexeme, $Value, $Result );
-                        break;
-                        default:
-                            /* null, array, object, resource — пропуск */
-                        break;
-                    }
-
-                    /* Continue while result not equal previous */
-                    $Continue += $Continue || ( $ResultBefore != $Result );
-                }
             }
         }
+        $result = implode( '', $accum );
 
-        $count ++;
+        $loop --;
 
-        if( $count > 100 )
+        if( $source == $result || $loop == 0 )
         {
-            $Continue ++;
+            $stop = true;
+        }
+        else
+        {
+            $source = $result;
+            $stop = false;
         }
     }
-    while( $Continue != 0 );
+    while( !$stop );
 
-    return $Result;
+    return $result;
 }
 
 
@@ -537,50 +491,46 @@ function clReplace
 function clPrep
 (
     /* Значение для макроподстановок */
-    $ASource,
+    $aSource,
     /* Список ключей для подмены */
-    array   $AKeys      = [],
+    array   $aKeys      = [],
     /* Список игнорируемых ключеней, которые остаются в незменном виде */
-    array   $AExclude   = [],
-    /* Открывающий ключ макроподстановки. Только 1 символ */
-    string  $ABegin     = '%',
-    /* Закрывающий ключ макроподстановки. Только 1 символ */
-    string  $AEnd       = '%'
+    array   $aExclude   = [],
+    /* Разделитель макроподстановки */
+    string  $aDelimiter     = '%',
 )
 {
-    $Result = null;
-    switch( gettype( $ASource ))
+    $result = null;
+    switch( gettype( $aSource ))
     {
         case 'string':
-            $Result = clReplace
+            $result = clReplace
             (
-                $ASource,
-                $AKeys,
-                $ABegin,
-                $AEnd,
-                $AExclude
+                $aSource,
+                $aKeys,
+                $aDelimiter,
+                $aExclude
             );
         break;
         case 'array':
-            $Result = [];
-            foreach( $ASource as $Key => $Value )
+            $result = [];
+            foreach( $aSource as $key => $value )
             {
-                $Result[ $Key ] = clPrep
+                $result[ $key ] = clPrep
                 (
-                    $Value,
-                    $AKeys,
-                    $AExclude,
-                    $ABegin,
-                    $AEnd
+                    $value,
+                    $aKeys,
+                    $aExclude,
+                    $aDelimiter
                 );
             }
         break;
         default:
-            $Result = $ASource;
+            $result = $aSource;
         break;
     }
 
-    return $Result;
+    return $result;
 }
 
 
