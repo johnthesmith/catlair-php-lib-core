@@ -72,8 +72,9 @@ class WebBot extends Params
     */
     public function execute()
     {
-        $URL = $this -> getUrl() -> toString();
-        $this -> Log -> Begin() -> Param( 'URL', $URL );
+        $url = $this -> getUrl() -> toString();
+        $this -> Log -> Begin() -> Param( 'url', $url );
+
         if( !function_exists( 'curl_init' ))
         {
             $this -> setResult
@@ -87,54 +88,33 @@ class WebBot extends Params
         else
         {
             $handle = curl_init();
-            curl_setopt( $handle, CURLOPT_URL, $URL );
 
-            /* Build POST parameters  for CURL */
-            $Keys = [];
-            foreach( $this -> Post -> GetParams() as $Key => $Value )
-            {
-                switch( gettype( $Value ))
-                {
-                    /* Bool value converted to string */
-                    case 'bool':
-                        $Value = $Value ? 'true' : 'false';
-                    break;
-                    /* Array or object values converted to json */
-                    case 'array':
-                    case 'object':
-                        $Value = json_encode
-                        (
-                            $Value,
-                            JSON_UNESCAPED_UNICODE|
-                            JSON_UNESCAPED_SLASHES
-                        );
-                    break;
-                }
-                /* Key and value converted to URI */
-                array_push
-                (
-                    $Keys,
-                    encodeURIComponent( $Key ) . '=' . encodeURIComponent( $Value )
-                );
-            }
-            $ParamsString = implode( '&', $Keys );
-
-            /* Set post URL for CURL */
-            if( !empty( $ParamsString ))
-            {
-                curl_setopt( $handle, CURLOPT_POST, true);
-                curl_setopt( $handle, CURLOPT_POSTFIELDS, $ParamsString );
-            }
-
+            curl_setopt( $handle, CURLOPT_URL, $url );
             curl_setopt( $handle, CURLOPT_ENCODING, '');
             curl_setopt( $handle, CURLOPT_HEADER, true );
             curl_setopt( $handle, CURLOPT_RETURNTRANSFER, 1 );
             curl_setopt( $handle, CURLOPT_NOSIGNAL, 1);
             curl_setopt( $handle, CURLOPT_TIMEOUT_MS, $this -> RequestTimeoutMls );
 
-            /* Build headers */
+            /* Build POST parameters  for CURL */
+            $post = $this -> Post -> getParams();
+            $headers = $this -> headers;
+
+            unset( $this -> headers[ 'Content-Length' ]);
+
+            if( !empty( $post ))
+            {
+                $Keys = [];
+                $paramsStr = http_build_query( $post );
+                curl_setopt( $handle, CURLOPT_POST, true);
+                curl_setopt( $handle, CURLOPT_POSTFIELDS, $paramsStr );
+                $headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded';
+                unset($headers['Content-Length']);
+            }
+
+            /* Let and build header parameter */
             $curlHeaders = [];
-            foreach( $this -> headers as $name => $value )
+            foreach( $headers as $name => $value )
             {
                $curlHeaders[] = $name . ': ' . $value;
             }
@@ -323,10 +303,11 @@ class WebBot extends Params
 
     public function setPostParams
     (
-        $AParams
+        array $a
     )
+    :self
     {
-        $this -> Post -> SetParams( $AParams );
+        $this -> Post -> setParams( $a );
         return $this;
     }
 
