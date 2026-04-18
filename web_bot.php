@@ -18,41 +18,55 @@
 */
 
 
+
 namespace catlair;
 
 
 
-require_once 'params.php';
 require_once 'url.php';
 
 
 
-class WebBot extends Params
+class WebBot extends Result
 {
     const HTTP      = 'http';
     const HTTPS     = 'https';
 
-    private $Url                = null;
-    private $Post               = null;
-    private $content            = null;
-    private $Answer             = null; /* Object JSON, DOM, or other*/
-    private $DumpContent        = false;
-    private $RequestTimeoutMls  = 1000; /* Length of request at mls befor drop down it */
-    private $contentType        = null;
+    /* Log object */
+    private $log                = null;
 
+    /* Url object */
+    private $url                = null;
+    /* Post params */
+    private $post               = [];
+    /* Response content */
+    private $content            = null;
+    /* Body reguest prefers befor post params */
+    private $body               = null;
+    /* HTTP method */
+    private $method             = 'GET';
+    /* Request headers */
+    private $requestHeaders     = [];
     /* Headers input buffer */
-    private $headers            = [];
+    private $responseHeaders    = [];
+    /* Request timeot mls */
+    private $requestTimeoutMls  = 1000;
+    /* Connect timeot mls */
+    private $connectTimeoutMls  = 1000;
+
+
 
     /*
         Constructor
     */
-    function __construct( $ALog )
+    function __construct
+    (
+        /* Log object */
+        $aLog
+    )
     {
-        $this -> Url    = Url::create();
-        $this -> Log    = $ALog;
-        $this -> Get    = new Params();
-        $this -> Post   = new Params();
-        $this -> SetOk();
+        $this -> log    = $aLog;
+        $this -> url    = Url::create();
     }
 
 
@@ -60,9 +74,13 @@ class WebBot extends Params
     /*
         Create new bot object
     */
-    static public function create( $ALog )
+    static public function create
+    (
+        /* Log object */
+        $aLog
+    )
     {
-        return new WebBot( $ALog );
+        return new WebBot( $aLog );
     }
 
 
@@ -71,9 +89,14 @@ class WebBot extends Params
         Start request
     */
     public function execute()
+    :self
     {
         $url = $this -> getUrl() -> toString();
-        $this -> Log -> Begin() -> Param( 'url', $url );
+        $this
+        -> log
+        -> begin()
+        -> param( 'url', $url )
+        -> param( 'method', $this -> method );
 
         if( !function_exists( 'curl_init' ))
         {
@@ -89,157 +112,116 @@ class WebBot extends Params
         {
             $handle = curl_init();
 
-            curl_setopt( $handle, CURLOPT_URL, $url );
-            curl_setopt( $handle, CURLOPT_ENCODING, '');
-            curl_setopt( $handle, CURLOPT_HEADER, true );
-            curl_setopt( $handle, CURLOPT_RETURNTRANSFER, 1 );
-            curl_setopt( $handle, CURLOPT_NOSIGNAL, 1);
-            curl_setopt( $handle, CURLOPT_TIMEOUT_MS, $this -> RequestTimeoutMls );
+            /* Let and build header parameter */
+            $headers = $this -> requestHeaders;
 
-            /* Build POST parameters  for CURL */
-            $post = $this -> Post -> getParams();
-            $headers = $this -> headers;
-
-            unset( $this -> headers[ 'Content-Length' ]);
-
-            if( !empty( $post ))
+            /* Определение body */
+            if( !empty( $this -> body ))
             {
-                $Keys = [];
-                $paramsStr = http_build_query( $post );
-                curl_setopt( $handle, CURLOPT_POST, true);
-                curl_setopt( $handle, CURLOPT_POSTFIELDS, $paramsStr );
+                $body = $this -> body;
+            }
+            elseif( !empty( $this -> post ))
+            {
+                $body = http_build_query( $this -> post );
                 $headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded';
-                unset($headers['Content-Length']);
+            }
+            else
+            {
+                $body = null;
             }
 
-            /* Let and build header parameter */
+            /* Определение размера body */
+            if( empty( $body ))
+            {
+                unset( $headers[ 'Content-Length' ]);
+            }
+            else
+            {
+                $headers[ 'Content-Length' ] = (string) strlen( $body );
+                curl_setopt( $handle, CURLOPT_POSTFIELDS, $body );
+            }
+
             $curlHeaders = [];
             foreach( $headers as $name => $value )
             {
                $curlHeaders[] = $name . ': ' . $value;
             }
-            /* Apply headers */
-            curl_setopt( $handle, CURLOPT_HTTPHEADER, $curlHeaders );
+
+            /*  Set curl options */
+            curl_setopt_array
+            (
+                $handle,
+                [
+                    CURLOPT_URL => $url,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_HEADER => true,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_NOSIGNAL => 1,
+                    CURLOPT_TIMEOUT_MS => $this -> requestTimeoutMls,
+                    CURLOPT_CONNECTTIMEOUT_MS => $this -> connectTimeoutMls,
+                    CURLOPT_FORBID_REUSE => true,
+                    CURLOPT_FRESH_CONNECT => true,
+                    CURLOPT_CUSTOMREQUEST => $this -> getMethod(),
+                    CURLOPT_HTTPHEADER => $curlHeaders
+                ]
+            );
 
             /*
                 Send request
             */
             $response = curl_exec( $handle );
 
-            /* Separate headers and body */
-            $headerSize = curl_getinfo( $handle, CURLINFO_HEADER_SIZE );
-            $rawHeaders = substr( $response, 0, $headerSize );
-            $this -> content = substr( $response, $headerSize );
-
-            /* Headers parsing */
-            $this -> headers = [];
-            $lines = explode( "\r\n", trim( $rawHeaders ) );
-            foreach( $lines as $line )
-            {
-                if( strpos($line, ':') !== false )
-                {
-                    $parts = explode(':', $line, 2 );
-                    $this -> headers[ trim( $parts[ 0 ])] = trim( $parts[ 1 ]);
-                }
-            }
-
             /* Error processing */
             $error = curl_error( $handle );
             if( !empty( $error ))
             {
-                $this -> setResult( 'request-error', [ 'msg' => $error ]);
-            }
-
-            /* Set content type */
-            $this -> contentType = curl_getinfo( $handle, CURLINFO_CONTENT_TYPE );
-
-            /* Closw curl */
-            curl_close( $handle );
-
-            if( $this -> isOk() && $this -> DumpContent )
-            {
-                $this -> getLog() -> dump( $this -> getContent());
-            }
-        }
-        $this -> Log -> End();
-        return $this;
-    }
-
-
-
-    public function getContent()
-    {
-        return $this -> content;
-    }
-
-
-
-    public function getGet()
-    {
-        return $this -> Get;
-    }
-
-
-
-    public function getPost()
-    {
-        return $this -> Post;
-    }
-
-
-
-    public function decodeJSON()
-    {
-        if( $this -> IsOk() )
-        {
-            if( empty( $this -> content ))
-            {
-                $this -> Answer =
-                [
-                    'result' => [ 'code' => 'web_bot/empty_content' ]
-                ];
+                $this -> setResult
+                (
+                    'request-error',
+                    [
+                        'msg' => $error,
+                        'url' => $url
+                    ]
+                );
             }
             else
             {
-                $this -> Answer = json_decode
-                (
-                    $this -> content,
-                    true
-                );
-                if( empty( $this -> Answer ))
+                /* Separate headers and body */
+                $headerSize = curl_getinfo( $handle, CURLINFO_HEADER_SIZE );
+                $rawHeaders = substr( $response, 0, $headerSize );
+                $this -> content = substr( $response, $headerSize );
+
+                /* Headers parsing */
+                $this -> responseHeaders = [];
+                $lines = explode( "\r\n", trim( $rawHeaders ) );
+                foreach( $lines as $line )
                 {
-                    $this -> setResult
-                    (
-                        'web_bot/json_error',
-                        [
-                            'url' => $this -> getUrl() -> toString(),
-                            'content' => $this -> content
-                        ]
-                    );
+                    $parts = explode( ':', $line, 2 );
+                    $this -> responseHeaders[ trim( $parts[ 0 ])] = trim( $parts[ 1 ] ?? '' );
                 }
             }
+
+            /* Closw curl */
+            curl_close( $handle );
         }
+        $this -> log -> end();
         return $this;
     }
 
 
-
-    public function getAnswer()
-    {
-        return empty( $this -> Answer ) ? $this -> content : $this -> Answer;
-    }
 
 
 
     public function decodeDOM()
+    :self
     {
         if( $this -> IsOk() )
         {
             $Lines = explode( PHP_EOL, $this -> content );
-            $this -> Answer = new DOMDocument();
+            $this -> answer = new DOMDocument();
 
-            $Last = libxml_use_internal_errors(true);
-            $this -> Answer -> loadHTML( $this -> content );
+            $Last = libxml_use_internal_errors( true );
+            $this -> answer -> loadHTML( $this -> content );
 
             foreach ( libxml_get_errors() as $error)
             {
@@ -265,85 +247,112 @@ class WebBot extends Params
 
 
 
-    public function checkDOMTagsValue
-    (
-        $ATag,
-        $AValue
-    )
+    public function decodeJSON()
+    :self
     {
-        $Result = false;
-        $Nodes = $this -> Answer -> getElementsByTagName( $ATag );
-        foreach( $Nodes as $Node) $Result = $Result || $Node -> textContent;
-        return $Result;
-    }
-
-
-
-    public function checkDOMTagsExists
-    (
-        $ATag
-    )
-    {
-        $Nodes = $this -> Answer -> getElementsByTagName( $ATag );
-        return ! empty( $Nodes ) && count( $Nodes ) > 0;
-    }
-
-
-
-    public function setGetParams
-    (
-        $AParams
-    )
-    {
-        $this -> Get -> SetParams( $AParams );
+        if( $this -> isOk() )
+        {
+            if( empty( $this -> content ))
+            {
+                $this -> answer =
+                [
+                    'result' =>
+                    [
+                        'code' => 'web-bot/empty-content'
+                    ]
+                ];
+            }
+            else
+            {
+                $this -> answer = json_decode
+                (
+                    $this -> content,
+                    true
+                );
+                if( empty( $this -> answer ))
+                {
+                    $this -> setResult
+                    (
+                        'web-bot/json-error',
+                        [
+                            'url' => $this -> getUrl() -> toString(),
+                            'content' => $this -> content
+                        ]
+                    );
+                }
+            }
+        }
         return $this;
     }
 
 
 
-    public function setPostParams
+    /**************************************************************************
+    */
+
+
+    /*
+        Return result content
+    */
+    public function getContent()
+    {
+        return $this -> content;
+    }
+
+
+
+
+    public function getPost()
+    :array
+    {
+        return $this -> post;
+    }
+
+
+
+
+    public function setPost
     (
         array $a
     )
     :self
     {
-        $this -> Post -> setParams( $a );
+        $this -> post = $a;
         return $this;
     }
 
 
 
-    public function setPostParam
-    (
-        $AKey,
-        $AValue
-    )
+    public function getAnswer()
+    :array|string
     {
-        $this -> Post -> SetParam( $AKey, $AValue );
-        return $this;
+        return empty( $this -> answer ) ? $this -> content : $this -> answer;
     }
 
 
 
     public function setUrl
     (
-        $aUrl
+        $a
     )
+    :self
     {
-        $this -> Url = $aUrl;
+        $this -> url = $a;
         return $this;
     }
 
 
 
     public function getUrl()
+    :Url
     {
-        return $this -> Url;
+        return $this -> url;
     }
 
 
 
     public function getLog()
+    :Log
     {
         return $this -> Log;
     }
@@ -351,44 +360,94 @@ class WebBot extends Params
 
 
     public function getRequestTimeoutMls()
+    :int
     {
-        return $this -> RequestTimouteMls;
+        return $this -> requestTimouteMls;
     }
 
 
 
     public function setRequestTimeoutMls
     (
-        int $aValue = 1000
+        int $a
     )
+    :self
     {
-        $this -> RequestTimeoutMls = $aValue;
+        $this -> requestTimeoutMls = $a;
         return $this;
     }
 
 
 
-    public function getDumpContent()
+    public function getConnectTimeoutMls()
+    :int
     {
-        return $this -> DumpContent;
+        return $this -> connectTimouteMls;
     }
 
 
 
-    public function setDumpContent
+    public function setConnectTimeoutMls
     (
-        bool $aValue = false
+        int $a
     )
+    :self
     {
-        $this -> DumpContent = $aValue;
+        $this -> connectTimeoutMls = $a;
         return $this;
     }
 
 
 
-    public function getContentType()
+    /*
+        Исходящий тип контента
+    */
+    public function setRequestContentType
+    (
+        string $contentType
+    )
+    :self
     {
-        return $this -> contentType;
+        $this -> setHeader( 'Content-Type', $contentType );
+        return $this;
+    }
+
+
+
+    /*
+        Входящий тип конента
+    */
+    public function getResponseContentType()
+    :?string
+    {
+        return $this -> responseHeaders[ 'Content-Type' ] ?? null;
+    }
+
+
+
+    /*
+        Set http method
+    */
+    public function setMethod
+    (
+        /* Method name GET POST etc... */
+        string $a
+    )
+    :self
+    {
+        $this -> method = $a;
+        return $this;
+    }
+
+
+
+    /*
+        Get http method
+    */
+    public function getMethod()
+    :string
+    {
+        return $this -> method;
     }
 
 
@@ -396,26 +455,52 @@ class WebBot extends Params
     /*
         Set http headers key => value
     */
-    public function setHeaders
+    public function setRequestHeaders
     (
-        /* Массив заголовков (ключ => значение) */
+        /* Array of headers key:val */
         array $a
     )
     :self
     {
-        $this -> headers = $a;
+        $this -> requestHeaders = $a;
         return $this;
     }
 
 
 
     /*
-        Set http headers key => value
+        Return request headers
     */
-    public function getHeaders()
+    public function getRequestHeaders()
+    /* Array header:value */
     :array
     {
-        return $this -> headers;
+        return $this -> requestHeaders;
+    }
+
+
+
+
+    public function getResponseHeaders()
+    :array
+    {
+        return $this -> responseHeaders;
+    }
+
+
+
+    /*
+        Set raw body for request
+    */
+    public function setBody
+    (
+        /* Raw body*/
+        string $a
+    )
+    :self
+    {
+        $this -> body = $a;
+        return $this;
     }
 }
 

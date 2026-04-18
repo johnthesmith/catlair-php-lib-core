@@ -93,7 +93,7 @@ class Result
     {
         $this -> setResult
         (
-            $aSource[ 0 ][ 'code' ] ?? 'unknown_error',
+            $aSource[ 0 ][ 'code' ] ?? self::RC_OK,
             $aSource[ 0 ][ 'details' ] ?? []
         );
         return $this;
